@@ -1,0 +1,13 @@
+{
+  "name": "assetlog-cloud",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev --local --var DEV:1",
+    "deploy": "wrangler deploy",
+    "test": "node test/smoke.mjs",
+    "pretest": "test -f wrangler.toml || cp wrangler.toml.example wrangler.toml"
+  },
+  "devDependencies": {
+    "wrangler": "^3"
+  }
+}

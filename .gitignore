@@ -1,0 +1,20 @@
+# Your secrets and your money: never commit these
+.env
+.env.*
+!.env.example
+data/
+inbox/
+private/
+cloud/wrangler.toml
+cloud/.dev.vars
+
+# Build and tool caches
+node_modules/
+.wrangler/
+__pycache__/
+*.pyc
+.pytest_cache/
+.claude/*
+!.claude/skills/
+.claude-flow/
+.omc/

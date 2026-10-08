@@ -1,0 +1,201 @@
+{
+  "broker": "KB증권 Open API (B2C, personal). Production only. The portal FAQ says \"별도의 테스트 환경은 제공되지 않습니다\", so there is no sandbox. Base host: https://developer.kbsec.com:32484 (non-standard port 32484). The portal 개발가이드 lists this as the only 운영 환경 URL, and the official repo's config/brokers/kb/endpoints.yaml, backend/settings.py and example/python/common.py all use it.\n\nI re-verified everything on 2026-09-25 from fresh clones in /tmp/tmp.0EvTVYgN32. Sources:\n(P1) Official portal openapi.kbsec.com. I read the same data /apidoc_b2c renders from:\n- the embedded `apiserviceMenu` JSON (menu, apiIds, extraParam rateLimitRule)\n- GET /api/apis/public/{apiId}/tr-list (field specs), saved to /tmp/tmp.0EvTVYgN32/tr/*.json\n- GET /api/kbs/guide/test-file/{TRCODE} (sample request/response shown on the page), saved to /tmp/tmp.0EvTVYgN32/tf/*.json\n- the full doc downloads /api/kbs/guide/excel/b2c (xlsx) and /api/kbs/guide/json/b2c (zip), saved to /tmp/tmp.0EvTVYgN32/guide_b2c.xlsx and gj/\n- the /guide_b2c page\n- the error-code list GET /api/codes/public/B2C_error_code\n- the B2C FAQ GET /api/forums/10000000-0000-0011-0000-000000000002/posts?portalType=B2C\n(P2) Official repo github.com/kbsecurities/kb-openapi, at /tmp/tmp.0EvTVYgN32/kb-openapi. HEAD has only 29 market-data specs. The 93-TR spec is in commit 159480c (2026-07-29): frontend/src/app/openapi-test/samples.generated.json, extracted to /tmp/tmp.0EvTVYgN32/samples_159480c.json. It was trimmed to 29 in a8ac610 (2026-09-15).\n(S) Secondary, unofficial: github.com/jewon-oh/kr-broker at HEAD 51a058a, in /tmp/tmp.0EvTVYgN32/kr-broker. Files used: ts/src/kbsec.ts, ts/src/kbsec/*.ts, docs/coverage/kbsec.json, docs/brokers/kbsec.md.",
+  "auth": "Token: POST https://developer.kbsec.com:32484/oauth2/token with Content-Type: application/json.\n\nRequest body is an envelope: {\"dataHeader\":{\"ipAddr\":\"127.0.0.1\",\"macAddr\":\"00:00:00:00:00:00\"},\"dataBody\":{\"appKey\":\"<36ch>\",\"appSecret\":\"<32ch>\",\"grantType\":\"client_credentials\"}}. The P1 sample file (test-file/token) is verbatim this, P1 tr-list lists grantType/appKey/appSecret as required, and P2 auth_example.py and endpoints.yaml agree. There are two conflicting P1 renderings:\n- The /guide_b2c page shows a flat body {\"grant_type\",\"appKey\",\"appSecret\"}. S reports the server always answers that form with E021 '앱키로 앱정보 추출 중 오류가 발생했습니다.'\n- The raw tr-list reqExample (it is filtered out before display) is a stale leftover with clientId/clientSecret and a device-info dataHeader (udId, subChannel, deviceModel, …).\nUse the envelope with camelCase grantType.\n\nResponse: dataHeader {resultCode '200', resultMessage '성공', processFlag 'A', processCode '0000', processMessage '정상 처리되었습니다.', processTime 'YYYYMMDDhhmmssSSS'} and dataBody {access_token (JWT, spec length 440), token_type 'Bearer', expires_in (numeric type A0004, seconds, sample 86400 = 24h)}.\n\nTR calls: send `Authorization: bearer <access_token>` plus `appKey: <appKey>` and Content-Type: application/json.\n- The P1 tr-list description of token_type says to put 'bearer {access_token}' in Authorization.\n- The P2 example/python/common.py build_tr_headers and example/python/README.md say lowercase 'bearer' and also require the `appKey` HTTP header.\n- The P1 /guide_b2c header example instead shows 'Authorization : Bearer eyJ…' (capital B) and no appKey header.\n- S sends lowercase bearer + appKey and notes that uppercase was rejected in at least one case (kbsec.ts authenticate()). Use lowercase.\n\nRevoke: POST /oauth2/revoke with the same envelope and dataBody {token (440), appKey, appSecret}. Response dataBody {tokenRevoke:'Y'} (P1 test-file/revoke).\n\nNo user-approval or consent step for B2C client_credentials. Prerequisite: apply for Open API on the KB homepage, selecting the account and entering its password. The FAQ says the subscription lasts 1 year from application and then needs 갱신 or 재신청.\n\nAt issue time the server checks appKey 유효, appSecret 일치, API 사용 신청, 앱 사용 가능, API 권한, 계좌 권한, 호출 제한 정책 and 서비스 해지 (P1 guide).\n\nReissue limits: no numbers are published. P1 FAQ: '고객님의 서비스 이용 상태에 따라 토큰 발급이 제한될 수 있으므로…'. S (kbsec-auth.ts) reports:\n- KB limits issuance frequency.\n- A reissue while a token is active can return the same token (same JWT jti), with expires_in shortened to 3s or 1s near expiry.\n- Repeated failures are an account-restriction risk.\n\nRecommended handling: cache the token until about 60s before expires_in. Reissue on T041 '유효하지 않은 접근 토큰', T042 '접근 토큰을 찾을 수 없습니다', T043 '접근 토큰 기간이 만료', T044 '토큰 검증에 실패' (all in the P1 error list), or on I445. I445 is S-observed only and not in the P1 list; it comes back as HTTP 500 with processFlag B. Retry once only. If the reissued token has the same jti, S revokes it and then issues again. Never log appSecret or the token.",
+  "account_selection": "No request field carries an account number or product code. I checked the current P1 tr-list for all 9 account TRs and the 159480c spec (P2).\n\nThe account is bound to the appKey. The P1 FAQ ('어떤 계좌로 신청할 수 있나요?' / '서비스 신청부터 API 사용까지 절차') says you choose the account on the KB homepage application screen (계좌번호, 계좌명, 계좌 비밀번호) and then receive the App Key/Secret Key. S agrees: its uid is only a memo, and docs/coverage/kbsec.json says '계좌번호를 받는 TR이 없습니다'.\n\nThere is no account-list TR in the current P1 menu or the Excel 요약 sheet. SSQM0005 (총 잔고 조회) in the 159480c spec returns per-account rows (ac_no, ac_ncknm, gds_typ_cd, val_amt, tfnd_amt, o_amt_psbl_amt, nxt2_dy_tfnd…). It is absent from the current portal, and S got I446 (API 사용 권한이 없습니다) calling it on 2026-09-24.\n\nFor multiple accounts, plan one appKey/appSecret pair per account (inferred, not documented) and keep a local config of {label, appKey, appSecret} per account.\n\nRequest envelope for every TR: {\"dataHeader\":{\"ipAddr\":..,\"macAddr\":..},\"dataBody\":{...}}. P1 marks dataHeader.ipAddr and macAddr as required (length 100).",
+  "endpoints": [
+    {
+      "purpose": "Issue access token (OAuth2 client_credentials)",
+      "method": "POST",
+      "url": "https://developer.kbsec.com:32484/oauth2/token",
+      "headers": [
+        "Content-Type: application/json"
+      ],
+      "request": "dataHeader{ipAddr, macAddr}. The P1 sample uses '127.0.0.1' / '00:00:00:00:00:00'; the P2 example sends '' and S sends '' for the token call. dataBody{grantType (18, required, 'client_credentials'), appKey (36, required), appSecret (32, required)}.",
+      "response_fields": "dataHeader.resultCode ('200'; '9999' = API failure), resultMessage, processFlag ('A' success / 'B' fail), processCode ('0000'), processMessage, processTime. dataBody.access_token (JWT, 440), token_type ('Bearer'), expires_in (numeric, seconds, e.g. 86400).",
+      "sample_response_excerpt": "\"dataBody\" : {\n    \"access_token\" : \"{{발급된 토큰}}\",\n    \"token_type\" : \"Bearer\",\n    \"expires_in\" : 86400\n  }",
+      "source": "P1 https://openapi.kbsec.com/api/apis/public/c174b37c-02d5-406a-b58a-235d2a01e9a4/tr-list and https://openapi.kbsec.com/api/kbs/guide/test-file/token (local /tmp/tmp.0EvTVYgN32/tr/TOKEN.json, tf/token.json); P2 example/python/auth_example.py, config/brokers/kb/endpoints.yaml; S ts/src/kbsec/kbsec-auth.ts",
+      "pagination": "n/a"
+    },
+    {
+      "purpose": "Revoke an access token. Use only on a stuck or invalid token.",
+      "method": "POST",
+      "url": "https://developer.kbsec.com:32484/oauth2/revoke",
+      "headers": [
+        "Content-Type: application/json"
+      ],
+      "request": "dataHeader{ipAddr, macAddr}; dataBody{token (440, required), appKey (36, required), appSecret (32, required)}",
+      "response_fields": "dataBody.tokenRevoke ('Y' = revoked); dataHeader.processFlag 'A', processCode '0000'. P1 error T051 means 접근 토큰 폐기에 실패했습니다.",
+      "sample_response_excerpt": "\"dataBody\" : {\n    \"tokenRevoke\" : \"Y\"\n  }",
+      "source": "P1 https://openapi.kbsec.com/api/apis/public/e207dee2-2656-4ef2-8cc8-ad2948f4789a/tr-list and /api/kbs/guide/test-file/revoke (tr/REVOKE.json, tf/revoke.json); S ts/src/kbsec/kbsec-auth.ts revokeToken (S tries token/accessToken/access_token; P1 documents 'token')",
+      "pagination": "n/a"
+    },
+    {
+      "purpose": "SWQA2301 거래내역 조회: account ledger for 위탁, 금융상품 and 저축 accounts over a date range. P1 description: '위탁, 금융상품, 저축 계좌의 거래 내역을 기간별로 조회합니다.입출금, 매매, 배당 등 계좌 원장 상의 모든 거래 기록을 확인할 수 있습니다.' This is the main source for deposits, withdrawals and cash dividends.",
+      "method": "POST",
+      "url": "https://developer.kbsec.com:32484/api/v1/swqa2301",
+      "headers": [
+        "Content-Type: application/json",
+        "appKey: <appKey> (P2 official example/README)",
+        "Authorization: bearer <access_token>"
+      ],
+      "request": "Current P1 tr-list lists five dataBody inputs:\n- strt_dt: 시작일자, YYYYMMDD, required\n- end_dt: 종료일자, YYYYMMDD, required\n- is_no: 종목번호 (12), optional\n- nxt_key: 다음키 (100), '' on the first call\n- srt_clsf: '1' 과거거래내역순, '2' 최근거래내역순\n\nThe P1 sample request file (test-file/SWQA2301) actually carries the older 19-key body. The page hides the extra keys through cleanJson(). That sample is: inq_clsf '1', inq_clsf1..inq_clsf6 '0', strt_dt/end_dt '20260622', and '' for is_no, strt_no, nxt_key, srt_clsf, dl_clsf, dl_md_ccd, md_isnc_tno, crdt_crd_isnc_info, onl_prt_ccd, isng_bl_at_trsns_xcl_f.\n\nThe 159480c spec (P2) defines those keys as:\n- inq_clsf: 조회구분, required, desc '전체'\n- inq_clsf1..inq_clsf6: filters for 입금, 출금, 입고, 출고, 매수, 매도 (1:설정, 0:미설정)\n- strt_no: 시작번호, 7ch; an 거래일련번호 to start from\n- dl_clsf: '1' 간편거래로 출력\n\nS sends the full 19-key body with inq_clsf '1', inq_clsf1..6 all '1', srt_clsf '1', and the undescribed keys ''.\n\nRecommendation: send the 19-key body with inq_clsf '1' (a superset of the 5 listed keys, and what the P1 sample used). Leave dl_clsf and the undescribed keys ''.",
+      "response_fields": "dataBody: o_lngth, o_clsf ('SC'), o_msg, nxt_key (100ch, all spaces = last page), grid_cnt1 (row count), Record1[]. All values are strings.\n\nRecord1[] fields:\n- Row identity: dl_dt (거래일자 YYYYMMDD), dl_sq (거래일련번호, 10), smry_nm (적요명, 35, e.g. '입금'), smry_typ_cd (적요유형코드, 3, e.g. '001'), dl_typ_cd (거래유형코드, 2, e.g. '01')\n- Amounts: dl_amt (거래금액, 30; comma-formatted, left space-padded, unsigned), ec_amt (정산금액, 15, zero-padded KRW), tfnd_blnc (예수금잔고 after the row, 18), q (수량), dl_uprc (거래단가)\n- Fees and taxes: fee (수수료), tx (세금), dl_tx (거래세), incm_tx (소득세), rsdnt_tx (주민세), ffs_tx (농특세), trsf_tx (양도세), abrd_fee (국외수수료, 2dp)\n- Foreign currency: crncy_clsf_nm (통화구분명, 40), fcrncy_amt (외화금액, 2dp), fcrncy_tfnd (외화예수금), fcrncy_tfnd_ra (외화예수금잔액, 2dp), exch_r (환율, 4dp)\n- Security and counterparty: is_nm, stnd_is_cd (표준종목코드), dl_mkt (거래시장), cprty_ac_nm (상대계좌명), dprt_cd_nm (부점코드명), scrts_blnc_q (유가증권잔고수량)\n- Other: fncng_amt, itst_rpay_amt, etc_chck_amt, stmt_pr_pymt_amt, ocp_pymt_amt, itst_use_fe, arrs_fee, scrts_rpay_q, stmt_pr_pymt_amt_rpay, bnf_blnc_val, bnf_no, rcvbl_rpay_amt, etc_lndng_amt_rpay_amt, dl_txtn_uprc",
+      "pagination": "Body-level only. Send nxt_key from the previous response and loop until the response nxt_key is blank after strip(). No HTTP continuation headers are involved. S caps the number of pages and flags truncation when the same nxt_key repeats.",
+      "sample_response_excerpt": "\"grid_cnt1\" : \"0002\", … \"dl_amt\" : \"                     1,000,000\", … \"dl_dt\" : \"20260622\", … \"dl_typ_cd\" : \"01\", … \"smry_typ_cd\" : \"001\", … \"ec_amt\" : \"000000001000000\", … \"smry_nm\" : \"입금\" (row 2: \"tfnd_blnc\" : \"000000000101000000\", \"dl_amt\" : \"                   100,000,000\")",
+      "source": "P1 https://openapi.kbsec.com/api/apis/public/08bb57e8-699a-435e-b584-65929c331d9a/tr-list, /api/kbs/guide/test-file/SWQA2301, Excel sheet 'SWQA2301_거래내역 조회' (menu 국내주식 > 계좌잔고); P2 159480c samples.generated.json id Tkb_SWQA2301_B2C; S ts/src/kbsec.ts fetchAccountLedger/fetchLedgerRows/collectTrPages, ts/src/kbsec/kbsec-tr-inputs.ts (coverage: verified 'spec-only')"
+    },
+    {
+      "purpose": "SWQM2412 거래내역 조회 상세: one ledger entry in detail, looked up by date and 거래일련번호. Use it to classify a SWQA2301 row and to read withholding taxes.",
+      "method": "POST",
+      "url": "https://developer.kbsec.com:32484/api/v1/swqm2412",
+      "headers": [
+        "Content-Type: application/json",
+        "appKey: <appKey>",
+        "Authorization: bearer <access_token>"
+      ],
+      "request": "dataBody:\n- inq_dt: 조회일자 YYYYMMDD, required\n- dl_sq: 거래일련번호 (10), from SWQA2301\n- nxt_key: 10ch\n\nThe P1 sample sends inq_dt '20260622', dl_sq '', nxt_key ''.",
+      "response_fields": "Flat single record, no Record array.\n- Identity and classification: dl_sq, dl_knd_cd (거래종류코드, 14; blank in the sample), dl_knd_nm (거래종류명, e.g. '입금'), smry_cd (적요코드, 3, e.g. '001'), smry (적요), rap_ccd (출납구분코드, e.g. '타점처리'), cncl_clsf (취소구분, e.g. '정상'), orgnl_dl_sq\n- Security: is_no, is_nm, dl_q, uprc_p4\n- Amounts: dl_amt (13ch, zero-padded, no commas), ec_amt, tx_mvg_out_pamt_amt (세전출납부금액)\n- Fees and taxes: fee, dl_tx, incm_tx, rsdnt_tx, ffs_tx, spt_incm_tx / spt_rsdnt_tx / spt_ffs_tx (분리과세)\n- Balances: itst_amt (이자금액), tfnd_bdy_ra (예수금전일잔액), tfnd_tdy_ra (예수금금일잔액)\n- Foreign currency: fcrncy_amt, exch_r, abrd_fee\n- Other: dtls_cntnt (상세내용), crd_ccd (e.g. '무통거래'), ordr_md_cd, hndl_tm, pgm_id, dprt_cd_nm, dl_memo\n- Personal data, do not store or log: rsdnt_rno (주민등록번호, masked, e.g. '850722-1******'), pth_cprty_ac_no (이체상대계좌번호), i_amt_rqs_p (입금요청자)",
+      "pagination": "nxt_key (10ch) in the body",
+      "sample_response_excerpt": "\"dl_knd_nm\" : \"입금\", … \"smry\" : \"입금\", … \"cncl_clsf\" : \"정상\", … \"tfnd_tdy_ra\" : \"000000000001000000\", … \"smry_cd\" : \"001\"",
+      "source": "P1 https://openapi.kbsec.com/api/apis/public/b6b28d00-c48b-47d5-a86e-00131d62156e/tr-list, /api/kbs/guide/test-file/SWQM2412; P2 159480c Tkb_SWQM2412_B2C; S ts/src/kbsec.ts fetchLedgerEntryDetail (verified 'spec-only')"
+    },
+    {
+      "purpose": "SSQM2952 잔고현황 조회(체결기준). API description '계좌자산평가'. P1: '계좌에 연결된 전체 자산의 현재 평가 금액을 조회합니다.주식, 금융상품, 예수금을 포함한 총 자산 평가를 제공…'. Header totals plus per-holding rows. The best single call for domestic total assets.",
+      "method": "POST",
+      "url": "https://developer.kbsec.com:32484/api/v1/ssqm2952",
+      "headers": [
+        "Content-Type: application/json",
+        "appKey: <appKey>",
+        "Authorization: bearer <access_token>"
+      ],
+      "request": "dataBody: excg_mktpr_ccd (거래소시세구분코드: 'A' 통합시세, 'K' KRX, 'N' NXT).\n- Current P1 marks it optional (req=N), and the P1 sample sends ''.\n- 159480c marked it required with example '1'.\n- S sends 'A'. S live-confirmed that A, K and N are accepted.",
+      "response_fields": "Header (KRW, zero-padded integer strings unless noted):\n- nt_asts_val_amt (순자산평가금액). In the P1 sample it equals scrts_nt_val_amt + nxt2_dy_tfnd (426500 + 639950 = 1066450).\n- Valuation: scrts_nt_val_amt (유가순평가금액), val_amt_sum (평가금액합계), val_pl_sum, byng_amt_sum, nt_byng_amt, val_pl, val_yld / val_yld_sum (%, 2dp)\n- Cash: dy_tfnd (일예수금), ndy_tfnd (익일예수금), nxt2_dy_tfnd (익익일예수금), ndy_o_amt_psbl_amt / nxt2_dy_o_amt_psbl_amt (출금가능), fcrncy_tfnd_krw_exch_amt (외화예수금원화환산액, 2dp)\n- Loans and collateral: fncng_amt, fncng_amt_sum, gnl_ln_amt, nrfnd_fncng_amt, etc_lndng_amt, itst_npymt_amt, mrtg_rt, mrtg_shrtg_amt, brwg_nd_mrtg_amt, elw_excs_mgn, cma_pldg_est_amt\n- Counts: tl_data_cnt, grid_cnt1\n\nRecord1[] rows:\n- Identity: clsf (e.g. '현금'), crncy_cd, is_cd (e.g. 'A005930'), is_nm\n- Quantities: hld_q (보유수량; 0 in the sample while a buy is unsettled), ec_q (정산수량; 1 in the sample, the real holding including unsettled; S uses it), ordr_psbl_q, nstmt_s_q / nstmt_b_q, *_p6 variants (hld_q_p6, ec_q_p6, …)\n- Values: byng_amt, byng_avr_prc (2dp), now_prc (2dp), val_amt (평가금액 KRW), val_pl, val_yld\n- Other: is_dtl_typ_cd, fee_r_p9, addt_amt, dl_tx_r_p4, ffs_tx_r_p4, nxtd_lstng_ccd, fnl_ccls_excg_cd",
+      "pagination": "No nxt_key in this TR",
+      "sample_response_excerpt": "\"dy_tfnd\" : \"000000000001000000\", … \"nxt2_dy_tfnd\" : \"000000000000639950\", … \"scrts_nt_val_amt\" : \"000000000000426500\", … \"is_cd\" : \"A005930\", … \"hld_q\" : \"000000000000000\", \"ec_q\" : \"000000000000001\", … \"nt_asts_val_amt\" : \"000000000001066450\"",
+      "source": "P1 https://openapi.kbsec.com/api/apis/public/57bc6bac-8951-4f40-af53-d98ea5408329/tr-list, /api/kbs/guide/test-file/SSQM2952; P2 159480c Tkb_SSQM2952_B2C (label 계좌자산평가); S ts/src/kbsec.ts fetchDomesticHoldingsFromAssetEval (verified 'real' in docs/coverage/kbsec.json)"
+    },
+    {
+      "purpose": "SSQM2932 잔고현황 조회(결제기준): balance for 종합위탁 and 신연금저축 accounts on a settlement-date basis. Returns cash, the KRW equivalent of FX cash, and holdings. Rows carry crncy_cd.",
+      "method": "POST",
+      "url": "https://developer.kbsec.com:32484/api/v1/ssqm2932",
+      "headers": [
+        "Content-Type: application/json",
+        "appKey: <appKey>",
+        "Authorization: bearer <access_token>"
+      ],
+      "request": "Current P1 tr-list lists two dataBody inputs, both optional:\n- inq_clsf: '1' 계좌별, '2' 상품유형별 (자문/일임)\n- excg_mktpr_ccd: 'A' / 'K' / 'N'\n\nThe P1 sample request file sends 4 keys: inq_clsf '1', scrts_ccd '0', excg_mktpr_ccd '0', bnd_val_wy_cd '1'.\n\nThe 159480c spec marks all 4 required:\n- scrts_ccd: '0' 전체, '1' 주식, '2' 선물옵션, '3' 펀드, '4' 채권, '5' 기타, '6' 일반상품(금현물), '9' 전체 (상장폐지주식 제외)\n- bnd_val_wy_cd: '1' 평가안함, '2' 시가평가, '3' 매도배정단가평가, '4' 현재가\n\nS sends inq_clsf '1', scrts_ccd '0', bnd_val_wy_cd '', excg_mktpr_ccd 'A', live-verified 2026-09-24. S says '1' and 'A' both worked and gave the same result.\n\nRecommendation: send all 4 keys.",
+      "response_fields": "Header (KRW):\n- Cash: tfnd (예수금), o_amt_psbl_amt (출금가능금액), ordr_psbl_csh, pcnt100/30/40 order-capacity fields, fcrncy_tfnd_krw_exch_amt (외화예수금원화환산액, 2dp)\n- Valuation: byng_amt_sum, pl_amt_sum, val_amt_sum (평가금액합계), yld_sum (%)\n- Receivables, loans and collateral: rcvbl_npamt_amt (미수미납), tl_crdt_ln_amt, fncng_amt, nrfnd_fncng_amt, etc_lndng_amt, mgn_csh, rtpnsn_pldg_est_amt\n- Counts: tl_data_cnt, grid_cnt1\n\nRecord1[] rows:\n- Identity: gds_typ (상품유형), clsf, crncy_cd (통화코드), is_nm, is_cd\n- Quantities: blnc_q, blnc_q_p6 (S: use blnc_q_p6 as the quantity; blnc_q differed on a live account), ordr_psbl_q, ordr_psbl_q_p6\n- Values: now_prc, byng_avr_prc, pl_amt, val_amt, yld, val_sgrvt_p2\n- Other: ln_dt, mtrt_dt, is_dtl_typ_cd, crdt_typ_cd, nxtd_lstng_ccd, fnl_ccls_excg_cd\n\nS live check: val_amt = blnc_q_p6 × now_prc and header val_amt_sum = the row sum, for domestic rows.",
+      "pagination": "No nxt_key in this TR",
+      "sample_response_excerpt": "\"o_amt_psbl_amt\" : \"000000000000339901\", … \"fcrncy_tfnd_krw_exch_amt\" : \"000000000000.00\", … \"tfnd\" : \"000000000001000000\", … \"Record1\" : [ ]",
+      "source": "P1 https://openapi.kbsec.com/api/apis/public/dacd5bd7-558c-4741-96c5-22b85108aaa1/tr-list, /api/kbs/guide/test-file/SSQM2932; P2 159480c Tkb_SSQM2932_B2C; S ts/src/kbsec.ts fetchIntegratedBalance, docs/coverage/kbsec.json (verified 'real')"
+    },
+    {
+      "purpose": "SSQM0004 예수금내역: domestic KRW cash (today, D+1, D+2, orderable, withdrawable)",
+      "method": "POST",
+      "url": "https://developer.kbsec.com:32484/api/v1/ssqm0004",
+      "headers": [
+        "Content-Type: application/json",
+        "appKey: <appKey>",
+        "Authorization: bearer <access_token>"
+      ],
+      "request": "dataBody: is_no (종목번호, 12, optional; send '')",
+      "response_fields": "Flat (KRW, zero-padded):\n- Balances: tdy_tfnd_amt (금일예수금액), ndy_tfnd (익일예수금), nxt2_dy_tfnd (익익일예수금)\n- Orderable: ordr_psbl_csh (주문가능현금), ordr_psbl_sbt, ordr_psbl_amt\n- Order basis: ordr_std_dpstn_csh, ordr_std_dpstn_sbt, ordr_std_dpstn_tl_amt\n- Withdrawable: do_psbl_csh (인출가능현금), do_psbl_sbt, do_psbl_tl_amt",
+      "pagination": "none",
+      "sample_response_excerpt": "\"nxt2_dy_tfnd\" : \"000000000639950\", \"ordr_psbl_csh\" : \"000000000339901\", \"tdy_tfnd_amt\" : \"000000001000000\", … \"ndy_tfnd\" : \"000000001000000\"",
+      "source": "P1 https://openapi.kbsec.com/api/apis/public/136e137f-8116-4a67-bf7f-05f4752ee426/tr-list, /api/kbs/guide/test-file/SSQM0004; P2 159480c Tkb_SSQM0004_B2C; S fetchBalance (verified 'real')"
+    },
+    {
+      "purpose": "SSQM1801 보유주식 조회: domestic holdings list with quantities only. The P1 description promises 평균 매입 단가, 평가금액 and 손익, but the response spec has only quantities.",
+      "method": "POST",
+      "url": "https://developer.kbsec.com:32484/api/v1/ssqm1801",
+      "headers": [
+        "Content-Type: application/json",
+        "appKey: <appKey>",
+        "Authorization: bearer <access_token>"
+      ],
+      "request": "dataBody:\n- inq_clsf: required. '0' 현금주식매도, '1' 현금주식예약, '2' 현금주식일괄매도, '3' ELW+현금, '4' 장외단주매도, '5' ELW 전용, '6' 현금주식매도+코넥스+ETN, '7' 코넥스전용, '8' ETN 전용, '9' ELW+현금+ETN\n- is_no: optional\n- mkt_tm_ccd: required. '1' 정규시장, '2' 장개시전시간외, '3' 장종료후시간외, '4' 시간외단일가\n- nxt_key: 12ch\n\nThe P1 sample request also carries spclz_ordr_ccd '' and act_cd '' (both in the 159480c spec), with inq_clsf '0' and mkt_tm_ccd '1'. S observed that omitting mkt_tm_ccd is rejected with processCode 3576 ('시장 구분값을 확인하세요').",
+      "response_fields": "Header: ordr_psbl_q, gnrl_q, nxt_key, grid_cnt1.\nRecord1[] rows: is_no (e.g. 'A005930'), is_nm, ordr_psbl_q (주문가능수량), gnrl_q (일반수량 = settled).\nS takes max(gnrl_q, ordr_psbl_q) as the holding.",
+      "pagination": "nxt_key (12ch) in the body, until blank",
+      "sample_response_excerpt": "\"Record1\" : [ {\n      \"gnrl_q\" : \"000000000000000000\",\n      \"is_nm\" : \"삼성전자\",\n      \"is_no\" : \"A005930\",\n      \"ordr_psbl_q\" : \"000000000000000001\"\n    } ]",
+      "source": "P1 https://openapi.kbsec.com/api/apis/public/0c27b10f-cd06-4c30-840d-c644df1d609b/tr-list, /api/kbs/guide/test-file/SSQM1801; P2 159480c Tkb_SSQM1801_B2C; S ts/src/kbsec/kbsec-pick.ts kbsecHoldingQuantity, kbsec-tr-inputs.ts (verified 'real')"
+    },
+    {
+      "purpose": "SPQM2226 해외주식계좌잔고평가조회: overseas holdings and per-currency cash (USD etc.) with KRW equivalents. This is the TR for USD assets.",
+      "method": "POST",
+      "url": "https://developer.kbsec.com:32484/api/v1/spqm2226",
+      "headers": [
+        "Content-Type: application/json",
+        "appKey: <appKey>",
+        "Authorization: bearer <access_token>"
+      ],
+      "request": "Current P1 tr-list dataBody:\n- std_crncy_f: 기준통화여부, required. '1' 외화기준, '2' 원화기준\n- exch_r_aplc_f: optional. '1' 환전시매도환율, '2' 매매기준환율(원화)\n- fee_clsf: optional. '0' 포함, '1' 미포함\n- cn_f: 연속여부, no values described. SPQO2226 in 159480c documents 'Y' 연속 / 'N' 미연속.\n- nxt_key: 100\n- mktpr_aplc_clsf: 시세적용구분. New, and no values are documented.\n\nThe P1 sample request has 12 keys: std_crncy_f '1', exch_r_aplc_f '1', and '' for fee_clsf, srt_clsf, rsrv_ordr_f, tl_asts_exch_val_amt, tl_tfnd_exch_val_amt, tl_scrts_exch_val_amt, tl_krw_val_amt, tl_krw_val_pl_amt, cn_f, nxt_key. It has no mktpr_aplc_clsf. 159480c marked std_crncy_f, exch_r_aplc_f and fee_clsf required.\n\nS sends std_crncy_f '1', exch_r_aplc_f '2', fee_clsf '1', srt_clsf '1', cn_f '', nxt_key '', with the remaining spec keys filled ''. This is verified 'real'.",
+      "response_fields": "Header (no grid_cnt1):\n- Totals: tl_asts_exch_val_amt (총자산환산평가금액; P1 note '외화(소수점보정으로 *100)'), tl_tfnd_exch_val_amt (총예수금환산평가금액), tl_scrts_exch_val_amt (총유가증권환산평가금액; note '기준통화(외화/원화)'), tl_krw_val_amt (총원화평가금액; note '기준통화(외화/원화)'), tl_krw_val_pl_amt (총원화평가손익금액; note '외화(소수점보정으로 *100)'; signed, e.g. '-00000000000000561'), asts_val_amt\n- KRW cash: krw_tfnd (원화예수금), krw_mgn, krw_o_amt_psbl_amt (note '* 미사용 (SPQO2226에서 조회)'), chck_amt\n- Loans: etc_lndng_amt, mrtg_ln_amt\n- nxt_key\n\nRecord1[] (cash per currency): crncy_clsf_nm (e.g. 'USD'), tfnd (예수금, 2dp), mgn_p2, fcrncy_dl_fee, rus_psbl_ra_p3, rus_use_amt_p3, ordr_psbl_amt_p2, o_amt_psbl_amt_p2, tfnd_val_amt (예수금평가금액), std_exch_r (기준환율), mrtg_ln_amt, cnvr_exch_r_p4, otr_ogn_fcrncy_tfnd_p2.\n\nThen grid_cnt2 and Record2[] (holdings):\n- Identity: mkt_clsf_nm, mkt_clsf, crncy_clsf_nm, is_cd (ticker, e.g. 'TSLA'), is_nm\n- Quantities: frgn_hld_q_p6 (해외보유수량, 6dp), frgn_ordr_psbl_q_p6, frgn_ordr_psbl_q1_p6\n- Prices: now_prc_p4 (현재가 in the foreign currency), byng_avr_prc_p4, pl_qt_uprc_p4\n- Values: byng_amt, tl_byng_amt_p2, krw_val_amt (원화평가금액), krw_exch_byng_amt, krw_exch_val_pl, yld, invst_sgrvt_rt_p5\n- Rates and fees: std_exch_r, cnvr_exch_r_p4, mn_fee_p4, fee_r_p10\n- Orders: b_ordr_q, b_ccls_q_p6, s_ordr_q, s_ccls_q_p6\n- Other: ln_dt, mtrt_dt, mrtg_ln_amt, dcml_dl_f",
+      "pagination": "nxt_key (100) and cn_f in the body. The P1 sample ends with processFlag 'A', processCode '0223', o_msg '조회 완료, 더 이상 조회할 자료가 없습니다.' and a blank nxt_key.",
+      "sample_response_excerpt": "\"tl_asts_exch_val_amt\" : \"000000000078890\", … \"tl_scrts_exch_val_amt\" : \"000000001207805\", \"tl_krw_val_amt\" : \"000000000001207805\", \"o_msg\" : \"조회 완료, 더 이상 조회할 자료가 없습니다.\", … \"tl_krw_val_pl_amt\" : \"-00000000000000561\"",
+      "source": "P1 https://openapi.kbsec.com/api/apis/public/5085c341-f0fb-4bd5-b190-5584e9fad719/tr-list, /api/kbs/guide/test-file/SPQM2226 (menu 해외주식 > 계좌잔고); P2 159480c Tkb_SPQM2226_B2C; S ts/src/kbsec.ts fetchOverseasHoldings, ts/src/kbsec/kbsec-pick.ts pickHoldingGrid/pickCashGrid (verified 'real')"
+    },
+    {
+      "purpose": "SRQM3051 계좌권리 발생내역: corporate actions, including dividends (배당예정금액, 배당확정금액, 현금지급일자, 단가). P1: '배당금 지급, 주식 배당, 무상증자 등 보유 종목에서 발생한 권리 행사 내역을 확인할 수 있습니다.'",
+      "method": "POST",
+      "url": "https://developer.kbsec.com:32484/api/v1/srqm3051",
+      "headers": [
+        "Content-Type: application/json",
+        "appKey: <appKey>",
+        "Authorization: bearer <access_token>"
+      ],
+      "request": "dataBody:\n- strt_dt: 시작일자 YYYYMMDD, optional\n- rgt_clsf: 권리구분, required. '0' 전체, '1' 배당, '2' 유상증자/BW권리행사, '3' 무상증자, '4' 매수청구, '5' 감자, '6' 액면분할/액면병합, '7' 피흡수합병\n- is_cd: 종목코드 (12), optional\n- nxt_key: 35\n\nThere is no end date. The P1 sample sends strt_dt '20260622', rgt_clsf '1', is_cd '', nxt_key ''. S sends rgt_clsf '0'.",
+      "response_fields": "nxt_key (35), grid_cnt1, Record1[].\n\nRecord1[] fields:\n- Identity: is_cd (종목코드, output length 6), is_nm, rgt_ccd_nm (권리구분코드명), hld_clsf_nm (보유구분명)\n- Dates: bss_dt (기준일자), csh_py_dt (현금지급일자), stck_io_stck_dt, hndl_dt, lstng_dt, odds_amt_py_dt, csh_sl_o_amt_dt, sl_odds_amt_o_amt_dt, stk_sl_o_amt_dt\n- Quantities: hld_q / hld_q_p6 (보유수량), alct_q / alct_q_p6 (배정수량)\n- Dividend: uprc (단가, presumably the per-share dividend), rgt_rt (권리비율), dvdnd_expt_amt (배당예정금액, 18), dvdnd_dfnt_amt (배당확정금액, 18), hgh_dvdnd_entp_f / hgh_dvdnd_f_nm (고배당기업여부)\n- Warrants and prices: isng_prc, bw_lstng_dt, bw_isng_prc, wrnt_excs_prc, ecss_sbs_rt_p10, ecss_alct_rt_p10\n- Other: dcml_dl_f, rmrk, hndl_p_nm, wrkng_ac_no, ptfl_nm, dpstn_p_brn_no",
+      "pagination": "nxt_key (35ch) in the body, until blank",
+      "sample_response_excerpt": "\"processFlag\" : \"B\",\n    \"processMessage\" : \"\",\n    \"processCode\" : \"G533\", … \"o_msg\" : \"제권리 내역이 없습니다.\", … \"grid_cnt1\" : \"0000\", … \"Record1\" : [ ]",
+      "source": "P1 https://openapi.kbsec.com/api/apis/public/9f58dfd2-1f2e-4c5b-a3d3-f71e5c84ba1f/tr-list, /api/kbs/guide/test-file/SRQM3051 (listed under the 해외주식 > 계좌잔고 menu); P2 159480c Tkb_SRQM3051_B2C; S ts/src/kbsec.ts fetchCorporateActions (verified 'spec-only', market labelled KR by guess)"
+    },
+    {
+      "purpose": "SWQN2302 출금가능금액 조회 (익일익익일 출금가능금액): D+1 and D+2 withdrawable cash. Optional cross-check for cash.",
+      "method": "POST",
+      "url": "https://developer.kbsec.com:32484/api/v1/swqn2302",
+      "headers": [
+        "Content-Type: application/json",
+        "appKey: <appKey>",
+        "Authorization: bearer <access_token>"
+      ],
+      "request": "dataBody: ccd ('1' 익일예수금/익익일예수금 포함; optional; the P1 sample sends '1')",
+      "response_fields": "Flat record of about 110 fields. Key fields:\n- Withdrawable: ndy_o_amt_psbl_amt (익일출금가능금액), nxt2_dy_o_amt_psbl_amt (익익일출금가능금액)\n- Account: ac_nm (계좌명), opn_dt, mtrty_dt\n- Cash: tfnd_amt (예수금액), tfnd_tl_amt (예수금총액), ndy_tfnd_amt, nxt2_dy_tfnd_amt, krw_exch_amt (원화환산금액), otr_ogn_tfnd\n- Substitutes and checks: sbt_tl_amt, chck_i_amt, etc_chck_amt, rgt_sbt_amt\n- Withdrawal and order basis: do_psbl_csh, do_psbl_tl_amt, ordr_std_dpstn_csh\n- Loans: tl_ln_amt, …",
+      "pagination": "none",
+      "source": "P1 https://openapi.kbsec.com/api/apis/public/606fa00a-999f-4cbc-ac73-b32b09ba2bc6/tr-list, /api/kbs/guide/test-file/SWQN2302; P2 159480c Tkb_SWQN2302_B2C; S fetchWithdrawableAmount (verified 'spec-only')"
+    }
+  ],
+  "rate_limits": "No rate limit is stated in portal text, the guide or the FAQ.\n\nThe portal's API metadata (P1 `extraParam`, in both the embedded apiserviceMenu and /api/apis/public/{apiId}/tr-list) carries the same rule for every B2C TR in the menu, including all TRs listed here: rateLimitRule {\"requestLimit\":\"200\",\"refreshPeriod\":\"5\",\"waitingPeriod\":\"3\"}. The token and revoke calls have no extraParam. The units and scope are undocumented. One plausible reading is 200 requests per 5-second window with a 3-second wait once exceeded.\n\nRate-limit error codes (P1 /api/codes/public/B2C_error_code):\n- E041 '서비스 호출 건수룰 초과 하였습니다.'\n- E042 '유량제어 정책을 확인해주세요.'\n- I435 '서비스 호출 건수를 초과하였습니다.'\n\nThe P1 FAQ warns that 과도한 API 호출 or 반복 오류 can lead to 이용 제한/차단. S uses 400ms spacing (2.5 req/s) as a conservative start.\n\nFor a personal tracker: keep calls sequential with about 300–500ms spacing. Back off at least 3s on E041/E042/I435. Never retry permanent errors (I446, E021, 3576) in a loop.",
+  "caveats": [
+    "Treat business success and HTTP status separately. dataHeader.processFlag 'A' means success and 'B' means failure. resultCode stays '200'/'성공' even on business failure; the P1 SRQM3051 sample has resultCode 200 with processFlag B. S observed business errors returned as HTTP 500 with the envelope present: I445 (token failure) and I446 (no permission). The official common.py calls raise_for_status() before parsing. Do not copy that; parse the envelope first.",
+    "Success processCodes seen: 0000 (token), 0011 (most P1 samples), 0223 (P1 SPQM2226 end of data), and 0024 (S). 'No data' responses are not uniform. G533 '제권리 내역이 없습니다.' comes with processFlag B (P1 SRQM3051 sample). S reports that 1861 '조회할 자료가 없습니다' and 2149 '해당자료가 없습니다' come with A on some TRs and B on others. I749 '해외주식 매매손익 내역이 없습니다' came with processFlag A plus blank rows (S, overseas P&L TRs). Keep a set of no-data codes and treat them as empty results.",
+    "The portal samples are mock data. The P1 FAQ says the portal and GitHub test samples are 'mock 데이터 기반의 이해용 샘플' and not real production messages. Two derivations in this contract rest on those samples and need checking against your own live responses: nt_asts_val_amt = scrts_nt_val_amt + nxt2_dy_tfnd, and the SPQM2226 ×100 units. The garbled SPQM2226 sample is the same mock data.",
+    "The portal page hides request keys that are not in the current spec. Its cleanJson() drops keys missing from tr-list req_b, so the rendered request shows fewer keys than the stored sample actually used. Actual sample key sets:\n- SWQA2301: 19 keys (page shows 5)\n- SSQM2932: 4 keys (page shows 2)\n- SSQM1801: 6 keys (page shows 4)\n- SPQM2226: 12 keys (page shows 5 of the 6 listed; mktpr_aplc_clsf was never in a sample)\nS saw rejections when keys were missing, e.g. SSQM1801 without mkt_tm_ccd gave 3576. Safest approach: send the full 159480c key set filled with '' and add any new current-spec keys.",
+    "Every value is a fixed-width string. Details:\n- Amounts are zero-padded ('000000000001000000'). Negatives carry a leading '-' ('-00000000000000561').\n- Decimal fields contain a literal '.'; the _p2/_p4/_p6 suffix gives the number of decimals.\n- SWQA2301 dl_amt is comma-formatted and left space-padded ('                     1,000,000'). SWQM2412 dl_amt is zero-padded without commas.\n- Text fields are space-padded, and nxt_key is all spaces on the last page.\nParse with s.strip().replace(',', '') and then decimal.Decimal.",
+    "SWQA2301 amounts are unsigned. No code table for smry_typ_cd, dl_typ_cd, smry_cd or dl_knd_cd exists in the portal pages, the tr-list JSON, the Excel/JSON downloads, any kb-openapi commit, or kr-broker. The only confirmed pair comes from the P1 sample: smry_nm '입금', smry_typ_cd '001', dl_typ_cd '01' (SWQM2412: smry_cd '001', dl_knd_nm '입금'). To tell inflow from outflow on KRW rows, compare tfnd_blnc with the previous row after sorting by (dl_dt, dl_sq); this is inferred. Build a local lookup from the smry_nm, smry_typ_cd and dl_typ_cd values that actually appear.",
+    "dataHeader ipAddr and macAddr: P1 marks both required (length 100). P1 samples use '127.0.0.1' with '00:00:00:00:00:00' (token) or '1A-2B-3C-4D-5E-67' (guide). P2 example/python/README.md and common.py say empty strings are fine for server-side calls, but that was only exercised on 투자정보 TRs. S says account TRs reject empty values with '입력 전문 [dataHeader.ipAddr]을 확인해 주세요'. Send the host's real IP and MAC; S uses the dash format 'XX-XX-XX-XX-XX-XX'. The P1 error list also has E031 '허용되지 않는 IP입니다' and E032 'whitelist 검증 중 오류가 발생했습니다', so an IP allow-list may exist.",
+    "SPQM2226 has two grids. Record1 is per-currency cash and Record2 is holdings, and there is no grid_cnt1 (grid_cnt2 comes before Record2). The P1 sample is garbled: Record1 holds shifted fixed-width fragments of a TSLA holding and Record2 is empty. Pick grids by field names, as S does: is_cd / frgn_hld_q_p6 means holdings; crncy_clsf_nm without is_cd means cash. Validate that the row values sum to the header totals.",
+    "SPQM2226 header units depend on std_crncy_f, and the P1 notes are inconsistent. With std_crncy_f='1' the mock sample gives tl_asts_exch_val_amt=78890 (USD×100 = 788.90) and tl_krw_val_pl_amt=-561 (USD×100 = -5.61); these match the '외화(*100)' notes. tl_scrts_exch_val_amt and tl_krw_val_amt are both 1207805, a KRW figure, although both are annotated '기준통화(외화/원화)'. For the tracker, compute the value per row as frgn_hld_q_p6 × now_prc_p4 in USD, take USD cash from Record1 tfnd, and convert with std_exch_r.",
+    "Domestic total assets: SSQM2952's P1 description says it covers 주식, 금융상품 and 예수금. In the mock sample, nt_asts_val_amt = scrts_nt_val_amt + nxt2_dy_tfnd, i.e. securities value plus D+2 cash net of unsettled trades. Using D+2 cash avoids counting a just-bought stock twice against today's cash. Whether nt_asts_val_amt nets out loans or includes foreign holdings or FX cash is undocumented. S skips non-KR rows in SSQM2952 to avoid double counting against SPQM2226.",
+    "Several TRs present in the July spec (159480c) are no longer in the current portal menu or Excel 요약: SSQM0005 총잔고, SSQM0006, SSQM0009 총자산평가, SSQN2952, SWQB2301 (CMA ledger), SWQM2302, SPQO2226, SPQM2220. S got I446 on a real account (2026-09-24) for SSQM0005, SSQM0009, SSQN2952, SWQM2302, SPQM2220 and SPQO2226. Do not build on them. A CMA account's ledger therefore has no current TR.",
+    "Where SRQM3051 sits: the portal menu and Excel put it under 해외주식 > 계좌잔고, but its fields look domestic (output is_cd length 6, 고배당기업여부). S labels it KR, unverified. It takes strt_dt only, with no end date. Whether dvdnd_dfnt_amt is the amount actually paid (net of the 15.4% withholding) is undocumented. Cross-check against the SWQA2301 dividend rows, which carry incm_tx and rsdnt_tx.",
+    "Authorization casing conflict: the /guide_b2c page example uses 'Bearer' and omits the appKey header, while the P1 token spec text and the P2 example use lowercase 'bearer' plus an appKey header. S reports an uppercase rejection. Use lowercase plus appKey. The portal's Sample Code Generator builds code from only method, path, content-type and body (the generateCode() params), so its snippets lack the host, Authorization and appKey. Do not copy them.",
+    "No sandbox: the P1 FAQ confirms there is no test environment, so everything runs against production with real account data. Keep the app strictly read-only and never wire in the order TRs (SSAM*, SKAM*, SPAO*).",
+    "The Open API subscription is valid for 1 year from application (P1 FAQ) and must be renewed or re-applied on the KB homepage. Expect auth failures such as E023/E063 '사용이 중단' after it lapses, and surface them clearly instead of retrying.",
+    "S lists fractional-share holdings in separate TRs: SSQM5472 (domestic) and SPQM5472 (overseas). Both are absent from the current portal menu, although SSQM5765 and SPQN5472 are listed. SSQM2952 and SPQM2226 have *_p6 fractional quantity fields, but whether fractional-only positions appear in them is not confirmed."
+  ],
+  "unresolved": [
+    "Meanings of smry_typ_cd (적요유형코드), dl_typ_cd (거래유형코드), smry_cd and dl_knd_cd. No code table exists in any primary source; only '001'/'01' = 입금 is confirmed. The smry_nm strings for dividends (e.g. 배당금입금, 해외배당금입금), withdrawals, transfers and FX exchange are also unconfirmed.",
+    "Whether SWQA2301 includes foreign-currency transactions (USD deposits and withdrawals, overseas dividends, 환전) and how they appear. The fcrncy_amt, crncy_clsf_nm, exch_r, abrd_fee and fcrncy_tfnd fields exist, but no sample row has them populated.",
+    "The maximum date range per SWQA2301 call and the maximum rows per page are undocumented. The P1 sample covers a single day.",
+    "Whether the live SWQA2301 needs the 19-key body (inq_clsf, inq_clsf1..6, dl_clsf, …) or accepts only the 5 current-spec keys. The P1 sample file used 19 keys with inq_clsf1..6='0'; S uses '1' but has not verified SWQA2301 live. Also unknown: whether inq_clsf1..6 act as filters when inq_clsf='1', and the default srt_clsf when sent blank.",
+    "Units and scope of rateLimitRule {requestLimit 200, refreshPeriod 5, waitingPeriod 3}: seconds vs. minutes, and per appKey vs. per API.",
+    "Token reissue limits (issues per day), and whether calling /oauth2/token while a token is valid returns the same token. Only S reports the same-jti behaviour and the 3s/1s shortened expires_in.",
+    "Whether one appKey can cover multiple accounts (the FAQ describes selecting '신청 계좌' in the singular), and whether any B2C TR lists accounts.",
+    "Exact composition of SSQM2952 nt_asts_val_amt (loans, 금융상品, foreign holdings, FX cash), and whether SSQM2952 or SSQM2932 rows with crncy_cd set include overseas holdings, which could double-count with SPQM2226.",
+    "SPQM2226 details: the unit rules for header totals under std_crncy_f='1' vs '2' (the P1 notes conflict with the mock sample values); the values and meaning of the new input mktpr_aplc_clsf; and the cn_f value for continuation pages ('Y' is inferred from SPQO2226 in 159480c).",
+    "SRQM3051 details: whether it covers overseas (US) dividends or only domestic ones; whether dvdnd_dfnt_amt is gross or net of tax; whether strt_dt filters on bss_dt or on the payment date.",
+    "Behaviour with empty dataHeader ipAddr/macAddr on account TRs: the official repo says it is OK (tested only on market-data TRs), while S says those TRs reject empty values. Also unknown: whether an IP allow-list (E031/E032) applies to B2C keys.",
+    "Meaning of the flag `simulatedInvestment: true` that the portal tr-list JSON carries on every TR, given that the FAQ states no separate test environment exists.",
+    "The SSQM2932 excg_mktpr_ccd value '0' used in the P1 sample. The documented values are A/K/N, and S found '1' and 'A' both accepted."
+  ]
+}

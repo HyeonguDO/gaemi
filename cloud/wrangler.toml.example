@@ -1,0 +1,38 @@
+# 개미장부's phone copy on Cloudflare Workers, behind Cloudflare Access; all of it on the free plan.
+# Copy this file to wrangler.toml (kept out of git: it holds your own database_id and Access ids) and fill it in.
+# src/index.js explains how it works. One-time setup (README "Cloudflare 설정"), in this directory:
+#   npm install && npx wrangler login
+#   npx wrangler d1 create assetlog                          # put the database_id it prints below
+#   npx wrangler d1 execute assetlog --remote --file schema.sql
+#   npx wrangler secret put PC_KEY                           # the same value as CLOUD_PC_KEY in ../.env
+#       (make one with: python3 -c 'import secrets; print(secrets.token_urlsafe(32))')
+#   npm run deploy
+#   Dashboard > the assetlog Worker > Access tab > Protect this Worker behind Access: All traffic, policy
+#   "Cloudflare account" (members of this account), session 1 month. Not "Protect all Workers" (that covers every
+#   Worker in the account), not an Email domain policy (that lets in everyone on the domain).
+#   Zero Trust > Access controls > Service credentials > Service Tokens: create "assetlog-pc" and put its Client ID
+#   and Secret values (without the "CF-Access-Client-Id: " names) into ../.env as CF_ACCESS_CLIENT_ID/SECRET.
+#   Add a Service Auth policy (Include: Service Token assetlog-pc) to the Worker's Access application.
+#   ACCESS_TEAM and ACCESS_AUD below: the <team> in the iss (https://<team>.cloudflareaccess.com) and the aud of the
+#   CF_Authorization JWT after a browser login. Then npm run deploy again. Until both are set, every request is a 503.
+# Local test: npx wrangler d1 execute assetlog --local --file schema.sql, PC_KEY=... in .dev.vars, then npm run dev
+# (DEV=1 skips Access). npm test runs test/smoke.mjs against a throwaway local database.
+name = "assetlog"
+main = "src/index.js"
+compatibility_date = "2025-07-18"  # the newest wrangler 3's bundled runtime supports locally
+compatibility_flags = ["nodejs_compat"]  # node:buffer: native base64, see src/index.js
+preview_urls = false  # <version>-assetlog.*.workers.dev would be another name to guard
+
+[assets]
+directory = "../assetlog/static"
+binding = "ASSETS"
+run_worker_first = true  # every request, static files too, passes the Access check and gets the security headers
+
+[[d1_databases]]
+binding = "DB"
+database_name = "assetlog"
+database_id = "00000000-0000-0000-0000-000000000000"  # replace with what `npx wrangler d1 create assetlog` printed (the placeholder only works locally)
+
+[vars]
+ACCESS_TEAM = ""  # <team> of https://<team>.cloudflareaccess.com
+ACCESS_AUD = ""   # the Access application's AUD tag

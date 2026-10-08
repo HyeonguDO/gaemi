@@ -1,0 +1,11 @@
+# systemd user service: applies the phone's writes queued in the Cloudflare Worker, then pushes the app's data to it
+# (python3 -m assetlog cloud; does nothing while CLOUD_URL is empty). Started by assetlog-cloud.timer.
+# At boot it can start before Wi-Fi is up: wait up to 2 min for DNS first (a failed run just waits for the next tick).
+[Unit]
+Description=assetlog cloud exchange (Cloudflare Worker)
+
+[Service]
+Type=oneshot
+WorkingDirectory=@ROOT@
+ExecStartPre=/bin/sh -c 'for i in $(seq 60); do getent hosts cloudflare.com >/dev/null && exit 0; sleep 2; done'
+ExecStart=/usr/bin/python3 -m assetlog cloud

@@ -1,0 +1,16 @@
+# systemd user service: one broker sync (balances, today's snapshot, new transactions). Started by assetlog-sync.timer.
+# A run missed while the PC was off starts right at boot, often before Wi-Fi is up: wait up to 2 min for DNS first.
+# The sync exits 75 when a broker failed for lack of network (see __main__.py); it is then retried every 10 min,
+# at most 5 starts in 3 h.
+[Unit]
+Description=assetlog daily broker sync
+StartLimitIntervalSec=3h
+StartLimitBurst=5
+
+[Service]
+Type=oneshot
+WorkingDirectory=@ROOT@
+ExecStartPre=/bin/sh -c 'for i in $(seq 60); do getent hosts openapi.koreainvestment.com >/dev/null && exit 0; sleep 2; done'
+ExecStart=/usr/bin/python3 -m assetlog sync
+Restart=on-failure
+RestartSec=10min

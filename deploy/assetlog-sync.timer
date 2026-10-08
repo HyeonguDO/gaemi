@@ -1,0 +1,11 @@
+# Runs the sync at 23:50 KST, when the day's deposits and withdrawals are in.
+# Persistent: a run missed while the PC was off or logged out happens at the next login.
+[Unit]
+Description=assetlog daily broker sync at 23:50
+
+[Timer]
+OnCalendar=*-*-* 23:50:00 Asia/Seoul
+Persistent=true
+
+[Install]
+WantedBy=timers.target

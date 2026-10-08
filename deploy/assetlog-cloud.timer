@@ -1,0 +1,11 @@
+# Runs the cloud exchange every 15 minutes (KST, :00 :15 :30 :45) while the PC is on.
+# Persistent: a run missed while the PC was off or logged out happens at the next login.
+[Unit]
+Description=assetlog cloud exchange every 15 minutes
+
+[Timer]
+OnCalendar=*-*-* *:0/15:00 Asia/Seoul
+Persistent=true
+
+[Install]
+WantedBy=timers.target

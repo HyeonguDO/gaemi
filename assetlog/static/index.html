@@ -1,0 +1,1084 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials"><!-- behind Cloudflare Access, a manifest fetched without the cookie is its sign-in page -->
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="개미장부">
+<title>개미장부</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root {
+  --bg: #f4f6f9; --card: #ffffff; --field: #f4f6f9; --line: #e7eaef; --line-strong: #dbdfe6;
+  --text: #10141c; --sub: #5b6472; --muted: #66707c;
+  --up: #e1394b; --down: #1c64f2; --up-soft: #fcebee; --down-soft: #eaf1fe;
+  --accent: #1c64f2; --accent-soft: #eaf1fe; --toast: #1c222c;
+  --warn: #b5540c; --warn-bg: #fff6ec; --warn-line: #f7dfc0;
+  --mint: #0f7a5c; --mint-bg: #e3f7ef; --neutral: #98a1ac;
+  --s1: #98a1ac; --s2: #f59e0b; --s3: #0f7a5c;
+  --p1: #1c64f2; --p2: #12b76a; --p3: #f59e0b; --p4: #7c5cfc; --p5: #e85d9e; --p6: #12969a;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); word-break: keep-all; overflow-wrap: anywhere; -webkit-font-smoothing: antialiased;
+  font: 15px/1.5 "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+main { max-width: 480px; margin: 0 auto; padding: 18px 20px calc(100px + env(safe-area-inset-bottom)); }
+.num, td, dd { font-variant-numeric: tabular-nums; }
+h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; margin: 4px 2px 0; }
+h2 { font-size: 15px; font-weight: 700; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 20px; margin-top: 14px; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.tag-muted { font-size: 12px; font-weight: 600; color: var(--muted); flex: none; }
+.hint { margin-top: 6px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.hint:first-child { margin-top: 0; }
+.mint { color: var(--mint); }
+.up { color: var(--up); } .down { color: var(--down); }
+
+/* top bar */
+.topbar { display: flex; justify-content: space-between; align-items: center; padding: 4px 2px 0; }
+.topbar-label { font-size: 14px; font-weight: 600; color: var(--sub); }
+.toggles { display: flex; gap: 8px; }
+.tbtn { min-width: 38px; height: 36px; padding: 0 13px; border-radius: 999px; border: 1px solid var(--line-strong);
+  background: var(--card); color: var(--sub); font: inherit; font-weight: 700; font-size: 14px; display: inline-flex;
+  align-items: center; justify-content: center; cursor: pointer; }
+.tbtn[aria-pressed=true] { background: var(--text); color: #fff; border-color: var(--text); }
+.tbtn:disabled { opacity: .4; cursor: default; }
+.tbtn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tbtn .slash { display: none; } .tbtn[aria-pressed=true] .slash { display: inline; }
+
+/* hero */
+.hero { padding: 16px 2px 2px; }
+.hero-value { font-size: 44px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+.hero-value small { font-size: 15px; font-weight: 600; color: var(--muted); }
+.hero-meta { margin-top: 9px; font-size: 12.5px; color: var(--muted); }
+
+/* period chips */
+.chips { display: flex; gap: 8px; margin-top: 16px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--card);
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--sub); display: inline-flex; align-items: center; cursor: pointer; }
+.chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+
+/* stat duo / inset row */
+.stat-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.stat-duo > :only-child { grid-column: 1 / -1; }
+.stat-tile { border: 1px solid var(--line); border-radius: 16px; padding: 14px 14px 13px; min-width: 0; }
+.stat-label { font-size: 12px; font-weight: 600; color: var(--sub); }
+.stat-value { margin-top: 7px; font-size: 22px; font-weight: 800; letter-spacing: -.01em; }
+.stat-caption { margin-top: 5px; font-size: 11px; color: var(--muted); }
+.inset-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding: 12px 14px; background: var(--field); border-radius: 14px; }
+.inset-row span { font-size: 13px; color: var(--sub); font-weight: 600; }
+.inset-row b { font-size: 14px; font-weight: 800; }
+
+/* growth bars */
+.growth-hero { display: flex; align-items: baseline; gap: 9px; margin-top: 6px; flex-wrap: wrap; }
+.growth-hero .v { font-size: 27px; font-weight: 800; letter-spacing: -.01em; }
+.growth-chip { font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+.growth-chip.up { background: var(--up-soft); color: var(--up); } .growth-chip.down { background: var(--down-soft); color: var(--down); }
+.bar-row { margin-top: 14px; }
+.bar-row-top { display: flex; justify-content: space-between; font-size: 13px; color: var(--sub); margin-bottom: 7px; }
+.bar-row-top b { color: var(--text); font-weight: 700; font-size: 13.5px; }
+.track { height: 8px; border-radius: 5px; background: var(--field); overflow: hidden; }
+.track i { display: block; height: 100%; min-width: 3px; border-radius: 5px; }
+.fill-neutral { background: var(--neutral); } .fill-up { background: var(--up); } .fill-down { background: var(--down); }
+
+/* charts */
+.chart-box { position: relative; height: 220px; margin-top: 14px; }
+
+/* dividend list */
+.div-list { margin-top: 6px; border-top: 1px solid var(--line); }
+.div-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.div-row:last-child { border-bottom: 0; }
+.div-name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.div-name b { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.div-name small { font-size: 11px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.div-right { text-align: right; flex: none; }
+.div-val { font-size: 13.5px; font-weight: 700; }
+.div-sub { margin-top: 3px; font-size: 11.5px; color: var(--muted); display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.yield-tag { font-size: 10px; font-weight: 700; color: var(--mint); background: var(--mint-bg); padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+.k-tag.div { background: var(--mint-bg); color: var(--mint); }
+
+/* avatar + accounts */
+.avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--field); color: var(--sub); display: flex;
+  align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex: none; }
+.acct-row { padding: 13px 0; border-bottom: 1px solid var(--line); }
+.acct-row:first-of-type { padding-top: 2px; } .acct-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.acct-top { display: flex; align-items: center; gap: 12px; }
+.acct-grow { flex: 1; min-width: 0; }
+.acct-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acct-meta { font-size: 12px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acct-right { text-align: right; flex: none; }
+.acct-val { font-size: 14.5px; font-weight: 800; }
+.acct-sub { margin: 4px 0 0 52px; font-size: 11.5px; color: var(--sub); }
+.acct-sub b { font-weight: 700; }
+.badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 6px; background: var(--warn-bg); color: var(--warn); margin-left: 4px; }
+
+/* yearly table: 5 columns are sized to fit a 360px phone without scrolling */
+.ytable-wrap { margin-top: 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table.ytable { width: 100%; border-collapse: collapse; }
+.ytable th { font-size: 10px; font-weight: 600; color: var(--muted); text-align: right; padding: 0 2px 8px; white-space: nowrap; }
+.ytable td { font-size: 12px; text-align: right; padding: 9px 2px; border-top: 1px solid var(--line); font-weight: 700; white-space: nowrap; }
+.ytable th:first-child, .ytable td:first-child { text-align: left; font-weight: 700; padding-left: 2px; }
+.ytable th:last-child, .ytable td:last-child { padding-right: 2px; }
+.ytable .yr-tag { margin-left: 2px; font-size: 10px; color: var(--accent); vertical-align: middle; }
+.warn-mark { border: 0; border-radius: 999px; width: 24px; height: 24px; padding: 3.5px; background: var(--up-soft);
+  background-clip: content-box; font: 700 11px/17px inherit; color: var(--up); cursor: pointer; vertical-align: middle; margin-left: 1px; }
+
+/* holdings pie */
+.pie-wrap { position: relative; height: 200px; margin-top: 6px; }
+.pie-legend { list-style: none; margin-top: 16px; }
+.pie-legend li { display: grid; grid-template-columns: 10px 1fr auto 72px; align-items: center; gap: 10px; padding: 7px 0; font-size: 13.5px; }
+.pie-legend i { width: 10px; height: 10px; border-radius: 3px; }
+.pie-legend .nm { min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pie-legend b { font-weight: 800; text-align: right; }
+.pie-legend .sub { color: var(--muted); font-size: 12px; text-align: right; }
+
+/* holding cards */
+.hd-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.hd-hero { display: flex; align-items: baseline; gap: 9px; margin-top: 8px; flex-wrap: wrap; }
+.hd-hero .v { font-size: 24px; font-weight: 800; letter-spacing: -.01em; }
+.hd-chip { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+.hd-chip.up { background: var(--up-soft); color: var(--up); } .hd-chip.down { background: var(--down-soft); color: var(--down); }
+.hd-sub { margin-top: 6px; font-size: 12.5px; color: var(--sub); }
+.pos-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
+.pos-grow { flex: 1; min-width: 0; }
+.pos-name { font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pos-name > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.pos-meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.pos-right { text-align: right; flex: none; }
+.pos-val { font-size: 13.5px; font-weight: 700; }
+.pos-pnl { font-size: 11.5px; margin-top: 2px; font-weight: 600; }
+
+/* review */
+.card.warn { background: var(--warn-bg); border-color: var(--warn-line); }
+.warn b { color: var(--warn); display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.warn ul { margin: 9px 0 0; padding-left: 18px; font-size: 12.5px; color: #8a5a22; line-height: 1.55; }
+.ico { display: inline-flex; align-items: center; justify-content: center; width: 19px; height: 19px; border-radius: 50%;
+  background: var(--warn); color: #fff; font-size: 11px; font-weight: 800; flex: none; }
+.pill { display: flex; width: 100%; justify-content: space-between; align-items: center; margin-top: 14px; padding: 14px 18px;
+  border: 0; border-radius: 16px; background: var(--up-soft); color: var(--up); font: inherit; font-weight: 700; cursor: pointer; }
+.steps { margin: 14px 0 0; padding-left: 20px; color: var(--sub); } .steps li { margin: 6px 0; }
+.tx-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.tx-memo { font-size: 14px; font-weight: 700; }
+.tx-amt { font-size: 14.5px; font-weight: 800; }
+.tx-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 9px; font-size: 12px; color: var(--muted); }
+.k-tag { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--field); color: var(--sub); flex: none; }
+.tx .ctl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.tx .ctl select, .tx .ctl input { height: 40px; margin: 0; }  /* 16px: iOS zooms into smaller fields */
+.tx .acts { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+.tx fieldset { border: 0; padding: 0; min-width: 0; }
+details { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+pre { white-space: pre-wrap; word-break: break-all; font-size: 12px; color: var(--sub); background: var(--field); padding: 10px; border-radius: 10px; margin-top: 6px; max-height: 220px; overflow: auto; }
+
+/* forms */
+label { display: block; margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--sub); }
+input, select { display: block; width: 100%; height: 48px; margin-top: 6px; padding: 0 14px; border: 1px solid var(--line-strong);
+  border-radius: 12px; background: var(--field); color: var(--text); font: inherit; font-size: 16px; }
+input[type=file] { height: auto; padding: 12px; font-size: 14px; }
+input:focus, select:focus { outline: none; border-color: var(--accent); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn { display: block; width: 100%; height: 52px; margin-top: 16px; border: 0; border-radius: 14px; background: var(--accent);
+  color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.sbtn { height: 40px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--card);
+  color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+.sbtn.danger { color: var(--up); border-color: var(--up-soft); }
+.sbtn:disabled { opacity: 0.5; cursor: default; }
+.list { list-style: none; margin-top: 12px; }
+.list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.list li:last-child { border-bottom: 0; }
+.list .meta { color: var(--muted); font-size: 12.5px; }
+
+/* tabbar / toast / banners */
+.tabbar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; display: flex;
+  background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(12px); border-top: 1px solid var(--line);
+  padding: 8px 6px calc(8px + env(safe-area-inset-bottom)); }
+.tabbar button { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px;
+  border: 0; background: none; color: var(--muted); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+.tabbar button[aria-current=page] { color: var(--accent); font-weight: 700; }
+.tabbar svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.count { position: absolute; top: 0; left: calc(50% + 6px); min-width: 17px; padding: 0 5px; border-radius: 999px; background: var(--up);
+  color: #fff; font-size: 11px; font-weight: 700; line-height: 17px; }
+#toast { position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom)); transform: translateX(-50%); max-width: calc(100% - 32px);
+  padding: 12px 18px; border-radius: 14px; background: var(--toast); color: #fff; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+#toast.show { opacity: 1; }
+.offline { margin: 0 4px 8px; padding: 10px 14px; border-radius: 12px; background: var(--warn-bg); color: var(--warn); font-size: 13px; font-weight: 600; }
+.cloudbar { margin: 0 4px 8px; padding: 8px 12px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); color: var(--sub); font-size: 12px; font-weight: 600; }
+.cloudbar p { margin-top: 4px; color: var(--warn); }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div id="offline" class="offline" role="status" hidden></div>
+  <div id="cloud" class="cloudbar" role="status" hidden></div>
+  <section id="tab-home" class="tab">
+    <div class="topbar"><div class="topbar-label">총자산</div>
+      <div class="toggles">
+        <button type="button" class="tbtn" id="cur-btn" aria-pressed="false" aria-label="달러로 보기" title="원화 / 달러로 보기">₩</button>
+        <button type="button" class="tbtn" id="hide-btn" aria-pressed="false" aria-label="금액 숨기기" title="금액 숨기기">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path class="slash" d="M3 3l18 18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="hero"><div class="hero-value num" id="total">—</div><div class="hero-meta" id="asof">불러오는 중…</div></div>
+    <div id="alerts"></div>
+    <div id="empty" class="card" hidden>
+      <h2>아직 기록이 없어요</h2>
+      <p class="hint">평가액이 두 번 이상 쌓이면 자산 증식 속도와 배당 기여를 보여 드려요.</p>
+      <ol class="steps">
+        <li><b>입력</b> 탭에서 계좌를 추가하세요. 증권사 동기화를 쓰면 계좌가 자동으로 생겨요.</li>
+        <li>.env에 KIS_ · KB_ · TOSS_ API 키를 넣고 <b>동기화</b>를 누르거나, 거래내역 파일을 가져오세요.</li>
+        <li>하나은행 DC처럼 API가 없는 계좌는 평가액과 부담금 입금을 직접 입력하세요.</li>
+      </ol>
+      <button class="btn" data-go="input">입력하러 가기</button>
+    </div>
+    <div id="home-body">
+      <article class="card" id="growth"></article>
+      <article class="card" id="returns"></article>
+      <article class="card">
+        <h2>평가액과 원금</h2>
+        <p class="hint">두 선 사이가 투자로 불어난 돈이에요.</p>
+        <div class="chart-box"><canvas id="c-series" role="img" aria-label="월말 평가액과 누적 원금 추이"></canvas></div>
+      </article>
+      <article class="card" id="divs"></article>
+      <article class="card"><h2>계좌</h2><div id="accounts"></div></article>
+      <article class="card" id="since"></article>
+      <article class="card">
+        <h2>연도별 수익률</h2>
+        <p class="hint">막대 = 가격 변동 + 배당 기여, 점 = 자산 증가율(입금 포함)</p>
+        <div class="chart-box"><canvas id="c-years" role="img" aria-label="연도별 투자수익률과 자산 증가율"></canvas></div>
+        <div class="ytable-wrap"><table id="years-table" class="ytable"></table></div>
+        <p class="hint" id="years-note" hidden></p>
+      </article>
+      <article class="card">
+        <h2>월별 배당금</h2>
+        <p class="hint">최근 24개월, 세후 입금액</p>
+        <div class="chart-box"><canvas id="c-divs" role="img" aria-label="최근 24개월 월별 배당금"></canvas></div>
+      </article>
+    </div>
+  </section>
+
+  <section id="tab-holdings" class="tab" hidden>
+    <div class="topbar"><h1 style="margin:0">보유</h1><button type="button" class="tbtn" id="hd-refresh">새로고침</button></div>
+    <p class="hint" id="hd-hint" style="margin:8px 2px 0" hidden>PC가 마지막으로 올린 잔고예요. 새로 조회하려면 PC에서 새로고침하세요.</p>
+    <div id="hd-body"></div>
+  </section>
+
+  <section id="tab-review" class="tab" hidden>
+    <h1>검토</h1>
+    <div class="card">
+      <p class="hint" style="margin-top:0">자동으로 분류하지 못한 거래예요. 원금이 들어오고 나간 것인지(입금·출금), 배당·이자인지, 매매·환전 같은 계좌 안의 거래인지 골라 주세요. 다른 증권사에서 옮겨 온 주식(타사대체 입고·출고)만 그날 평가금액을 금액에 넣고 입금·출금으로 분류하세요. 공모주·무상증자처럼 이 계좌 돈으로 생긴 입고는 계좌 안 거래예요.</p>
+      <label>보기<select id="rv-filter"></select></label>
+    </div>
+    <div id="rv-list"></div>
+  </section>
+
+  <section id="tab-input" class="tab" hidden>
+    <h1>입력</h1>
+    <div class="card">
+      <h2>증권사 동기화</h2>
+      <p class="hint">.env에 설정한 증권사 API로 잔고와 거래내역을 가져와요.</p>
+      <button class="btn" id="sync-btn">동기화</button>
+      <ul class="list" id="sync-out"></ul>
+    </div>
+    <form class="card" id="f-snap">
+      <h2>평가액 직접 입력</h2>
+      <p class="hint">DC 퇴직연금 적립금이나 과거 연말 잔고를 채울 때 쓰세요. 직접 입력한 같은 날짜는 덮어써요.</p>
+      <label>계좌<select name="account_id" class="acct-select" required></select></label>
+      <label>기준일<input type="date" name="date" required></label>
+      <div class="row2">
+        <label>평가액 (원)<input name="value" inputmode="numeric" placeholder="54,000,000" required></label>
+        <label>그중 현금 (선택)<input name="cash" inputmode="numeric"></label>
+      </div>
+      <button class="btn">저장</button>
+      <ul class="list" id="snap-list"></ul>
+    </form>
+    <form class="card" id="f-gold" hidden>
+      <h2>금현물 보유 입력</h2>
+      <p class="hint">증권사 앱의 금현물 잔고에 보이는 보유량과 매입금액 합계를 넣으세요. 늘어난 만큼은 매수로 기록하고, 평가액은 매일 KRX 금 시세로 계산해요.</p>
+      <label>기준일<input type="date" name="date" required></label>
+      <div class="row2">
+        <label>보유량 (g)<input name="grams" inputmode="decimal" placeholder="12.5" required></label>
+        <label>매입금액 합계 (원)<input name="cost" inputmode="numeric" placeholder="2,000,000" required></label>
+      </div>
+      <button class="btn">저장</button>
+    </form>
+    <form class="card" id="f-tx">
+      <h2>거래 직접 입력</h2>
+      <p class="hint">DC 부담금 입금처럼 파일이나 API로 들어오지 않는 입출금을 적어요. 출금은 양수로 적어도 자동으로 −가 붙어요.</p>
+      <label>계좌<select name="account_id" class="acct-select" required></select></label>
+      <div class="row2">
+        <label>날짜<input type="date" name="date" required></label>
+        <label>종류<select name="kind" class="kind-select"></select></label>
+      </div>
+      <label>금액 (원)<input name="amount" inputmode="numeric" required></label>
+      <label>메모<input name="memo" maxlength="200" placeholder="사용자부담금입금"></label>
+      <button class="btn">추가</button>
+    </form>
+    <form class="card" id="f-import">
+      <h2>파일 가져오기</h2>
+      <p class="hint" id="im-hint">증권사에서 내려받은 거래내역 파일을 올리세요. 같은 파일을 다시 올려도 중복되지 않아요.</p>
+      <label>계좌<select name="account_id" class="acct-select" required></select></label>
+      <label>형식<select name="fmt" id="im-fmt" required></select></label>
+      <label>파일<input type="file" name="file" accept=".pdf,.xlsx,.xls,.csv,application/pdf,text/csv" required></label>
+      <button class="btn">가져오기</button>
+      <pre id="im-out" hidden></pre>
+    </form>
+    <form class="card" id="f-inbox">
+      <h2>화면 캡처 보내기</h2>
+      <p class="hint">파일로 받을 수 없는 거래내역·잔고 화면의 스크린샷이나 화면 녹화를 서버로 보내 둡니다. 정리해서 넣는 건 나중에 한꺼번에 해요.</p>
+      <label>파일 (여러 개 가능)<input type="file" name="files" accept="image/*,video/*,.pdf,.xlsx,.xls,.csv" multiple required></label>
+      <button class="btn">보내기</button>
+      <pre id="inbox-out" hidden></pre>
+    </form>
+    <form class="card" id="f-acct">
+      <h2>계좌 추가</h2>
+      <div class="row2">
+        <label>기관<select name="institution">
+          <option value="kb">KB증권</option><option value="kis">한국투자증권</option><option value="toss">토스증권</option>
+          <option value="hana" selected>하나은행</option><option value="manual">기타</option></select></label>
+        <label>종류<select name="kind"><option value="brokerage">증권</option><option value="pension" selected>연금</option></select></label>
+      </div>
+      <label>계좌 ID<input name="id" required maxlength="64" pattern="[\w.:@\-]+" placeholder="hana:dc"></label>
+      <label>이름<input name="name" required maxlength="60" placeholder="하나은행 DC 퇴직연금"></label>
+      <button class="btn">추가</button>
+    </form>
+    <div class="card" id="logout-card" hidden>
+      <h2>로그아웃</h2>
+      <p class="hint">이 기기에 저장해 둔 화면도 함께 지워요.</p>
+      <button type="button" class="btn" id="logout-btn">로그아웃</button>
+    </div>
+  </section>
+</main>
+
+<nav class="tabbar">
+  <button data-go="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>홈</button>
+  <button data-go="holdings"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>보유</button>
+  <button data-go="review"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>검토<span class="count" id="count" hidden></span></button>
+  <button data-go="input"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>입력</button>
+</nav>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4" crossorigin="anonymous"></script>
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const INST = { kb: 'KB증권', kis: '한국투자증권', toss: '토스증권', hana: '하나은행', manual: '직접 입력', dc: 'DC 퇴직연금',
+  sync: '동기화 전체' };  // dc, sync: sources in a sync report
+const KIND = { DEPOSIT: '입금 (원금)', WITHDRAW: '출금 (원금)', DIVIDEND: '배당', INTEREST: '이자',
+  INTERNAL: '계좌 안 거래 (매매·환전·수수료)', UNKNOWN: '미분류' };
+const state = { summary: null, accounts: [], charts: {}, formats: null, holdings: null, cloud: false, meta: null, errs: [],
+  review: null, snaps: null, queued: new Set(), busy: new Set(), retPeriod: 'ytd' };
+const QUEUED = 'PC가 켜지면 반영돼요';
+
+// Display preferences (per device): ₩/$ and hidden amounts. Every money figure goes through won()/short().
+const view = (() => { try { return { usd: false, hide: false, ...JSON.parse(localStorage.getItem('view') || '{}') }; } catch { return { usd: false, hide: false }; } })();
+const usdRate = () => view.usd ? state.summary?.fx?.USD?.krw || null : null;  // KRW per $1, the broker's rate
+
+// 225627893 -> "2억 2,563만원", 123456 -> "12만 3,456원"; in $ mode "$165,903"
+function won(v, signed = false) {
+  if (v == null || !isFinite(v)) return '—';
+  const a = Math.round(Math.abs(v)), n = x => x.toLocaleString('ko-KR'), rate = usdRate();
+  const sign = v < 0 && a ? '−' : signed && a ? '+' : '';
+  if (view.hide) return sign + (rate ? '$••••' : '••••원');
+  if (rate) { const d = Math.abs(v) / rate; return sign + '$' + d.toLocaleString('en-US', { maximumFractionDigits: d < 1000 ? 2 : 0 }); }
+  let s;
+  if (a >= 1e6) {
+    const m = Math.round(a / 1e4), e = Math.floor(m / 1e4), r = m % 1e4;
+    s = (e ? n(e) + '억' : '') + (r ? (e ? ' ' : '') + n(r) + '만' : '') + '원';
+  } else if (a >= 1e4) s = n(Math.floor(a / 1e4)) + '만' + (a % 1e4 ? ' ' + n(a % 1e4) : '') + '원';
+  else s = n(a) + '원';
+  return sign + s;
+}
+// signed percentage, always 1 decimal so figures never mix precision across the page
+const pct = (x, signed = true) => x == null || !isFinite(x) ? '—'
+  : (x < 0 ? '−' : signed && x > 0 ? '+' : '') + Math.abs(x * 100).toFixed(1) + '%';
+// ▲/▼ ahead of the signed percentage (still +/−, so a screen reader that skips the glyph still hears the sign):
+// a colour-blind-safe cue for gain/loss percentages (never used for a plain yield)
+const apct = x => x == null || !isFinite(x) ? '—' : (x > 0 ? '▲' : x < 0 ? '▼' : '') + pct(x);
+const pctp = x => x == null || !isFinite(x) ? '—' : (x < 0 ? '−' : x > 0 ? '+' : '') + Math.abs(x * 100).toFixed(1) + '%p';
+const tone = x => x > 0 ? 'up' : x < 0 ? 'down' : '';
+const short = v => { const a = Math.abs(v), s = v < 0 ? '−' : '', rate = usdRate();
+  if (view.hide) return '';
+  if (rate) { const d = a / rate; return s + '$' + (d >= 1e6 ? +(d / 1e6).toFixed(1) + 'M' : d >= 1e3 ? Math.round(d / 1e3) + 'k' : Math.round(d)); }
+  return a >= 1e8 ? s + +(a / 1e8).toFixed(1) + '억' : a >= 1e4 ? s + Math.round(a / 1e4).toLocaleString('ko-KR') + '만' : s + a; };
+const kdate = iso => { const [y, m, d] = iso.split('-').map(Number); return `${y}년 ${m}월 ${d}일`; };
+const days = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
+const num = s => {
+  s = String(s ?? '').replace(/[,\s원]/g, '');
+  if (s === '') return null;
+  const v = Number(s);
+  if (!isFinite(v)) throw new Error('금액은 숫자로 입력하세요');
+  return v;
+};
+const signFor = (kind, v) => v == null ? v : kind === 'WITHDRAW' ? -Math.abs(v) : kind === 'DEPOSIT' ? Math.abs(v) : v;
+
+// 배당 제외/배당 기여: metrics.py already carries return_ex_div and dividend_return, but a caller (an older
+// period shape, another summary field) may not, so both fall back to the documented derivation.
+function exDiv(p) {
+  if (!p) return null;
+  if (p.return_ex_div != null) return p.return_ex_div;
+  return (p.return == null || p.dividend_yield == null) ? null : p.return - p.dividend_yield;
+}
+const divContrib = p => p ? (p.dividend_return ?? p.dividend_yield ?? null) : null;
+
+// Errors carry the HTTP status and the server's detail (a string, a validation list, or {code, message, ...}).
+async function api(path, opt = {}) {
+  let r;
+  // 'manual': Cloudflare Access's sign-in redirect comes back as opaqueredirect instead of failing like a lost connection
+  try { r = await fetch(path, { redirect: 'manual', ...opt, headers: { 'Content-Type': 'application/json', ...opt.headers } }); }
+  catch { throw new Error('서버에 연결할 수 없어요. 인터넷 연결을 확인하거나 잠시 뒤에 다시 해 보세요'); }
+  // Signed out of Cloudflare Access (cloud mode): it redirects, or may answer 401. A reload lets Access show its own
+  // sign-in; the saved copies go first, as they would at logout. The PC app has no login and answers neither.
+  if (r.status === 401 || r.type === 'opaqueredirect') {
+    forget().then(() => location.reload());
+    return new Promise(() => {});  // the page is leaving; no caller should show an error meanwhile
+  }
+  if (!opt.method || opt.method === 'GET') showOffline(r.headers.get('X-Offline') && r.headers.get('X-Saved-At'));
+  const body = await r.json().catch(() => null);
+  if (!r.ok) {
+    const d = body?.detail;
+    const msg = Array.isArray(d) ? d.map(e => `${e.loc?.slice(-1)[0]}: ${e.msg}`).join(', ') : typeof d === 'string' ? d : d?.message;
+    throw Object.assign(new Error(msg || `${r.status} ${r.statusText}`), { status: r.status, detail: d });
+  }
+  if (r.status === 202 && !opt.quiet) { toast(QUEUED); loadMeta(); }  // cloud/ queued the write for the PC: see done()
+  return body;
+}
+// A queued write (202 {queued}) has no result until the PC applies it: api() has said so, so skip the caller's own
+// message, output and re-reads (nothing the Worker serves changes before that). True when the write really happened.
+function done(r, msg) {
+  if (r?.queued != null) return false;
+  if (msg) toast(msg);
+  return true;
+}
+async function forget() {  // wipes every saved copy, sw.js's own included
+  navigator.serviceWorker?.controller?.postMessage({ type: 'logout' });
+  try { await Promise.all((await caches.keys()).map(k => caches.delete(k))); } catch {}  // also when no worker controls this page
+}
+const mask = s => view.hide ? s.replace(/\d[\d,.]*/g, '••') : s;
+
+// Cloud mode: the Worker in cloud/ answers /api/meta and serves the data the PC last pushed, queueing writes until
+// the PC pulls them. The PC app has no /api/meta (404): there nothing below changes.
+async function loadMeta() {
+  let m;
+  try { m = await api('/api/meta'); } catch { return; }
+  if (m?.mode !== 'cloud') return;
+  if (!state.cloud) {
+    state.cloud = true;
+    $('#sync-btn').textContent = '동기화 요청';
+    $('#hd-refresh').disabled = true; $('#hd-hint').hidden = false;  // holdings are what the PC pushed
+    $('#logout-card').hidden = false;  // ends the Access session; the PC app has no login
+  }
+  // each failed op is shown once: the newest id shown is kept per device, and in state for this page
+  let seen = 0;
+  try { seen = +localStorage.getItem('op-err') || 0; } catch {}
+  seen = Math.max(seen, ...state.errs.map(o => o.id));
+  // m.errors (not m.recent): a failed op can be older than the last 10 ops of any status
+  const errs = (m.errors || []).filter(o => o.id > seen);
+  if (errs.length) {
+    state.errs.push(...errs);
+    try { localStorage.setItem('op-err', String(Math.max(...errs.map(o => o.id)))); } catch {}
+  }
+  state.meta = m; renderMeta();
+}
+const OPS = { 'POST /api/snapshots': '평가액 입력', 'DELETE /api/snapshots': '평가액 삭제', 'POST /api/transactions': '거래 추가',
+  'PATCH /api/transactions': '거래 분류', 'DELETE /api/transactions': '거래 삭제', 'POST /api/accounts': '계좌 추가',
+  'POST /api/import': '파일 가져오기', 'POST /api/sync': '동기화 요청' };
+// "9월 26일 00:05" in KST, whatever offset the ISO time carries
+function kst(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return String(iso ?? '');
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d).map(x => [x.type, x.value]));
+  return `${p.month}월 ${p.day}일 ${p.hour}:${p.minute}`;
+}
+function renderMeta() {
+  const m = state.meta, el = $('#cloud');
+  if (!m) return;
+  const op = o => OPS[`${o.method} ${o.path.replace(/\/\d+$/, '')}`] || `${o.method} ${o.path}`;
+  el.hidden = false;
+  el.innerHTML = esc((m.pushed_at ? `PC 동기화 기준 ${kst(m.pushed_at)}` : 'PC에서 아직 올라온 데이터가 없어요')
+      + (m.pending > 0 ? ` · 반영 대기 ${m.pending}건` : ''))
+    + state.errs.map(o => `<p>${esc(`반영하지 못했어요 · ${kst(o.at)} ${op(o)}: ${mask(o.result || '이유 없음')}`)}</p>`).join('');
+}
+// sw.js answers from the phone's saved copy when the server can't be reached, and marks the answer X-Offline.
+function showOffline(savedAt) {
+  const el = $('#offline');
+  el.hidden = !savedAt;
+  if (savedAt) el.textContent = `서버에 연결할 수 없어 ${new Date(savedAt).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}에 저장한 화면을 보여 드려요. 동기화와 입력은 다시 연결되면 할 수 있어요.`;
+}
+let toastTimer;
+document.addEventListener('click', e => { const b = e.target.closest('.warn-mark'); if (b) toast(b.dataset.warn); });
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+async function load() {
+  // the input forms must stay usable when the summary fails: they are how bad data gets fixed
+  const [sum, acc] = await Promise.allSettled([api('/api/summary'), api('/api/accounts')]);
+  if (acc.status === 'fulfilled') state.accounts = acc.value;
+  $('#f-gold').hidden = !state.accounts.some(a => a.mode === 'gold');
+  document.querySelectorAll('.acct-select').forEach(sel => {
+    const keep = sel.value;
+    sel.innerHTML = state.accounts.length ? state.accounts.map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('')
+      : '<option value="" disabled selected>계좌를 먼저 추가하세요</option>';
+    if (keep && state.accounts.some(a => a.id === keep)) sel.value = keep;
+  });
+  const today = sum.value?.as_of || new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
+  document.querySelectorAll('input[type=date]').forEach(i => { i.max = today; i.value ||= today; });
+  if (sum.status === 'rejected') { $('#asof').textContent = '불러오지 못했어요: ' + sum.reason.message; return; }
+  const s = state.summary = sum.value;
+  $('#count').hidden = !s.unknown_count; $('#count').textContent = s.unknown_count;
+  renderHome(s);
+}
+
+function applyView() {
+  const hasRate = !!state.summary?.fx?.USD, cur = $('#cur-btn');
+  cur.disabled = !hasRate;
+  cur.title = hasRate ? '원화 / 달러로 보기' : '환율 정보가 없어요. 증권사 동기화를 하면 생겨요';
+  cur.textContent = usdRate() ? '$' : '₩';
+  cur.setAttribute('aria-pressed', String(!!usdRate()));
+  $('#hide-btn').setAttribute('aria-pressed', String(view.hide));
+}
+function toggleView(key) {
+  view[key] = !view[key];
+  try { localStorage.setItem('view', JSON.stringify(view)); } catch {}
+  applyView();
+  if (state.summary) renderHome(state.summary);
+  if (state.holdings) renderHoldings();
+  renderReview(); renderSnaps(); renderSync(); renderMeta();  // from the rows already fetched: no request
+}
+$('#cur-btn').onclick = () => toggleView('usd');
+$('#hide-btn').onclick = () => toggleView('hide');
+
+function renderHome(s) {
+  applyView();
+  $('#total').textContent = won(s.total_value);
+  const oldest = s.accounts.map(a => a.as_of).filter(Boolean).sort()[0];  // total adds each account's latest value
+  const rate = usdRate();
+  $('#asof').textContent = `기준일 ${kdate(s.as_of)} · 계좌 ${s.accounts.length}개` +
+    (oldest && oldest < s.as_of ? ` · 가장 오래된 평가액 ${kdate(oldest)}` : '') +
+    (rate ? ` · $1 = ${Math.round(rate).toLocaleString('ko-KR')}원 (${s.fx.USD.date.slice(5).replace('-', '/')} 증권사 환율)` : '');
+  const warns = [...new Set([...(s.ytd?.warnings || []), ...(s.ttm?.warnings || [])])];
+  const sy = s.sync, failed = sy?.failed || [];  // the PC's last sync (sync.py), pushed with the summary in cloud mode
+  $('#alerts').innerHTML =
+    (failed.length ? `<div class="card warn"><b><span class="ico" aria-hidden="true">!</span>동기화 실패 · ${esc(kst(sy.at))}</b>
+      <ul>${failed.map(f => `<li>${esc(`${INST[f.source] || f.source}: ${f.hint || mask(f.message)}`)}</li>`).join('')}</ul>
+      <p class="hint">${sy.ok_at ? `마지막 성공 ${esc(kst(sy.ok_at))}` : '성공한 기록이 아직 없어요'}</p></div>` : '') +
+    (sy?.at && Date.now() - new Date(sy.at) > 36 * 36e5
+      ? `<p class="note" style="margin:8px 4px 0;font-size:13px;color:var(--muted)">마지막 동기화: ${days(sy.at, Date.now())}일 전 (PC가 꺼져 있었다면 정상이에요)</p>` : '') +
+    (s.unknown_count ? `<button class="pill" data-go="review">분류가 필요한 거래 ${s.unknown_count}건<span aria-hidden="true">›</span></button>` : '') +
+    (warns.length ? `<div class="card warn"><b><span class="ico" aria-hidden="true">!</span>확인이 필요해요</b><ul>${warns.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
+      <p class="hint">평가액이 오래되면 수익률이 그날 기준으로 계산돼요. 동기화하거나 입력 탭에서 최신 평가액을 넣어 주세요.</p></div>` : '');
+  const empty = !s.series.length;
+  $('#empty').hidden = !empty; $('#home-body').hidden = empty;
+  if (empty) return;
+  $('#growth').innerHTML = growthCard(s.ytd, s);
+  $('#returns').innerHTML = returnsCard(s);
+  $('#divs').innerHTML = dividendCard(s);
+  $('#since').innerHTML = sinceCard(s);
+  $('#accounts').innerHTML = s.accounts.map(a => accountRow(a, s.as_of)).join('');
+  const curYear = s.as_of.slice(0, 4);
+  $('#years-table').innerHTML = `<thead><tr><th>연도</th><th>자산증가율</th><th>배당 포함</th><th>배당 제외</th><th>배당 기여</th></tr></thead><tbody>` +
+    s.years.slice().reverse().map(y => `<tr><td>${y.year}${String(y.year) === curYear ? '<span class="yr-tag" aria-label="진행중">●</span>' : ''}${y.partial ? '<span class="yr-tag" aria-label="기록을 시작한 해">*</span>' : ''}${y.warnings?.length ? ` <button type="button" class="warn-mark" aria-label="주의" data-warn="${esc(y.warnings.join(' · '))}">!</button>` : ''}</td>
+      <td class="num ${tone(y.growth_rate)}">${apct(y.growth_rate)}</td>
+      <td class="num ${tone(y.return)}">${apct(y.return)}</td>
+      <td class="num ${tone(exDiv(y))}">${apct(exDiv(y))}</td>
+      <td class="num mint">${pct(divContrib(y), false)}</td></tr>`).join('') + '</tbody>';
+  const note = (s.years.some(y => y.partial) ? '* 기록을 시작한 해: 시작일부터 계산. ' : '')
+    + (s.years.some(y => y.warnings?.length) ? '! 연초나 연말 평가액이 그 날짜와 멀어 부정확할 수 있음 (! 를 누르면 이유)' : '');
+  $('#years-note').hidden = !note; $('#years-note').textContent = note;
+  drawCharts(s);
+}
+
+// A null period has no valuation after `since`, or only the first one, which is where it would be measured from.
+const noPeriod = (s, since, none) => s.accounts.some(a => a.as_of > since) ? '평가액이 두 번 이상 쌓이면 계산돼요.' : none;
+
+function growthCard(p, s) {
+  if (!p) return `<div class="card-head"><h2>올해 자산 증식</h2></div><p class="hint">${noPeriod(s, s.as_of.slice(0, 4) - 1 + '-12-31', '올해 평가액 기록이 아직 없어요.')}</p>`;
+  const max = Math.max(Math.abs(p.net_flow), Math.abs(p.gain)) || 1;
+  return `<div class="card-head"><h2>올해 자산 증식</h2><span class="tag-muted">${p.partial ? kdate(p.eff_start) : '1월 1일'}부터</span></div>
+    <div class="growth-hero"><span class="v ${tone(p.growth)} num">${won(p.growth, true)}</span>${p.growth_rate != null ? `<span class="growth-chip ${tone(p.growth_rate)} num">${apct(p.growth_rate)}</span>` : ''}</div>
+    <div class="bar-row"><div class="bar-row-top"><span>순입금</span><b class="num">${won(p.net_flow, true)}</b></div>
+      <div class="track"><i class="fill-neutral" style="width:${(Math.abs(p.net_flow) / max * 100).toFixed(1)}%"></i></div></div>
+    <div class="bar-row"><div class="bar-row-top"><span>투자수익</span><b class="${tone(p.gain)} num">${won(p.gain, true)}</b></div>
+      <div class="track"><i class="${p.gain < 0 ? 'fill-down' : 'fill-up'}" style="width:${(Math.abs(p.gain) / max * 100).toFixed(1)}%"></i></div></div>
+    <p class="hint">${p.partial ? '올해 기록을 시작해 처음 평가액을 순입금으로 봤어요. ' : ''}투자수익률은 입출금 시점을 반영한 수정 디츠 방식이에요.</p>`;
+}
+
+function periodFor(s, key) {
+  if (key === 'ytd') return s.ytd; if (key === 'ttm') return s.ttm;
+  return s.years.find(y => String(y.year) === key) || null;
+}
+function returnsCard(s) {
+  const curYear = s.as_of.slice(0, 4);
+  const chips = [];
+  if (s.ytd) chips.push(['ytd', 'YTD']);
+  // a partial TTM with the same start as YTD, or the still-running year's own row, would just repeat the YTD chip
+  if (s.ttm && !(s.ttm.partial && s.ttm.eff_start === s.ytd?.eff_start)) chips.push(['ttm', '최근 1년']);
+  s.years.slice().reverse().forEach(y => { if (!(s.ytd && String(y.year) === curYear)) chips.push([String(y.year), y.year + '년']); });
+  if (!chips.length) return `<div class="card-head"><h2>수익률</h2></div><p class="hint">평가액이 두 번 이상 쌓이면 계산돼요.</p>`;
+  if (!chips.some(([k]) => k === state.retPeriod)) state.retPeriod = chips[0][0];
+  const label = chips.find(([k]) => k === state.retPeriod)[1], p = periodFor(s, state.retPeriod);
+  const ex = exDiv(p), dc = divContrib(p);
+  const qualifier = state.retPeriod === 'ytd' ? '올해' : state.retPeriod === 'ttm' ? '최근 1년간' : label;
+  const verb = dc > 0 ? '끌어올렸어요' : dc < 0 ? '끌어내렸어요' : '';
+  const insight = dc == null || ex == null ? '' : Math.abs(dc) < 0.0005
+    ? `<p class="hint">이 기간엔 배당 기여가 거의 없었어요 · 가격만 보면 ${apct(ex)}</p>`
+    : `<p class="hint">배당이 ${esc(qualifier)} 수익률을 <b class="mint">${pctp(dc)}</b> ${verb} · 가격만 보면 ${apct(ex)}</p>`;
+  // 환율 무시 (달러 기준): null when the demo/ledger has no fx history reaching this period (see metrics.with_usd)
+  const fx = p.fx_effect, fxArrow = fx > 0 ? '▲' : fx < 0 ? '▼' : '';
+  const usdBlock = p.return_usd == null ? '' : `<div class="inset-row"><span>달러 기준</span><b class="${tone(p.return_usd)} num">${apct(p.return_usd)}</b></div>
+    <p class="hint">환율 영향 <b class="${tone(fx)} num">${fxArrow}${pctp(fx)}</b> · 달러 기준은 평가액·입출금을 그날 환율로 달러로 바꿔 계산해요</p>`;
+  return `<div class="card-head"><h2>수익률</h2><span class="tag-muted">배당 반영 여부로 나눠 봐요</span></div>
+    <div class="chips">${chips.map(([k, l]) => `<button type="button" class="chip${k === state.retPeriod ? ' on' : ''}" aria-pressed="${k === state.retPeriod}" data-period="${esc(k)}">${esc(l)}</button>`).join('')}</div>
+    <div class="stat-duo">
+      <div class="stat-tile"><div class="stat-label">배당 포함</div><div class="stat-value ${tone(p.return)} num">${apct(p.return)}</div><div class="stat-caption">총수익률 · 배당 포함</div></div>
+      <div class="stat-tile"><div class="stat-label">배당 제외</div><div class="stat-value ${tone(ex)} num">${apct(ex)}</div><div class="stat-caption">가격 변동만 반영</div></div>
+    </div>
+    ${p.return_annualized != null ? `<div class="inset-row"><span>연환산 페이스</span><b class="${tone(p.return_annualized)} num">${apct(p.return_annualized)}</b></div>` : ''}
+    ${usdBlock}
+    ${insight}
+    <p class="hint">투자수익률은 입출금 시점을 반영한 수정 디츠 방식이에요.</p>`;
+}
+$('#returns').addEventListener('click', e => {
+  const b = e.target.closest('.chip[data-period]');
+  if (!b || !state.summary) return;
+  state.retPeriod = b.dataset.period;
+  $('#returns').innerHTML = returnsCard(state.summary);
+  $(`#returns .chip[data-period="${CSS.escape(state.retPeriod)}"]`)?.focus();
+});
+
+function dividendCard(s) {
+  const t = s.ttm, dp = s.dividend_payers;
+  const t12 = t ? (t.partial ? kdate(t.eff_start) + '부터' : '최근 12개월') : null;
+  if (!t && !dp) return `<div class="card-head"><h2>배당</h2></div><p class="hint">${noPeriod(s, s.as_of.slice(0, 4) - 1 + s.as_of.slice(4), '최근 12개월 평가액 기록이 없어요.')}</p>`;
+  // symbol has Latin letters ("AAPL") -> use it; a Korean/DC numeric code ("005930", "438100") gives a meaningless
+  // monogram, so fall back to the first characters of the name ("삼성전자" -> "삼성")
+  const mono = p => { const sym = String(p.symbol || ''); return esc(/[A-Za-z]/.test(sym) ? sym.slice(0, 2).toUpperCase() : String(p.name || '').slice(0, 2)); };
+  if (!dp) return `<div class="card-head"><h2>배당</h2><span class="tag-muted">${t12}</span></div>
+    <div class="hero" style="padding:8px 0 0"><div class="stat-label">${t12} 수령</div><div class="stat-value mint num" style="font-size:32px;margin-top:6px">${won(t.dividends)}</div></div>
+    <p class="hint">보유 탭에서 잔고를 불러오면 종목별 예상 배당을 보여 드려요.</p>`;
+  const shown = dp.positions?.slice(0, 5) || [], rest = (dp.positions?.length || 0) - shown.length;
+  return `<div class="card-head"><h2>배당</h2><span class="tag-muted">보유 배당주 기준</span></div>
+    <div class="hero" style="padding:8px 0 0"><div class="stat-label">예상 연 배당금</div><div class="stat-value mint num" style="font-size:32px;margin-top:6px">${won(dp.annual_krw)}</div></div>
+    <div class="stat-duo">
+      <div class="stat-tile"><div class="stat-label">배당수익률</div><div class="stat-value mint num">${pct(dp.yield, false)}</div></div>
+      ${t ? `<div class="stat-tile"><div class="stat-label">${t12} 수령</div><div class="stat-value num" style="font-size:19px">${won(t.dividends)}</div></div>` : ''}
+    </div>
+    ${shown.length ? `<div class="div-list">${shown.map(p => `<div class="div-row"><div class="avatar" aria-hidden="true">${mono(p)}</div>
+        <div class="div-name"><b>${esc(p.name)}</b><small>${esc(p.symbol)}</small></div>
+        <div class="div-right"><div class="div-val num">${won(p.value_krw)}</div>
+          <div class="div-sub num">연 ${won(p.annual_div_krw)} <span class="yield-tag">${pct(p.yield, false)}</span></div></div></div>`).join('')}</div>` : ''}
+    <p class="hint">${dp.as_of ? kdate(String(dp.as_of).slice(0, 10)) + ' 기준 · ' : ''}배당 상위 ${shown.length}종목${rest > 0 ? ` · 외 ${rest}종목` : ''} · 세후 입금액 기준 · 배당수익률은 최근 12개월 분배 기준</p>`;
+}
+
+function sinceCard(s) {
+  const c = s.since_start, first = s.years.find(y => y.return != null);
+  if (!c || !first) return '<h2>연평균 수익률</h2><p class="hint">평가액이 두 번 이상 기록되면 계산돼요.</p>';
+  const yearly = c.annual != null, usd = yearly ? c.annual_usd : c.cumulative_usd;
+  return `<div class="card-head"><h2>${yearly ? '연평균 수익률' : '누적 수익률'}</h2><span class="tag-muted">${kdate(first.span_start)}부터</span></div>
+    <div class="hero" style="padding:8px 0 0"><div class="hero-value ${tone(yearly ? c.annual : c.cumulative)} num" style="font-size:34px">${apct(yearly ? c.annual : c.cumulative)}${yearly ? '<small> / 년</small>' : ''}</div></div>
+    ${yearly ? `<div class="inset-row"><span>누적 수익률</span><b class="${tone(c.cumulative)} num">${apct(c.cumulative)}</b></div>` : ''}
+    ${usd != null ? `<div class="inset-row"><span>달러 기준</span><b class="${tone(usd)} num">${apct(usd)}</b></div>` : ''}
+    ${yearly ? `<p class="hint">기록 기간 ${(days(first.span_start, s.as_of) / 365).toFixed(1)}년</p>`
+      : '<p class="hint">기록이 1년 미만이라 연평균 대신 누적 수익률을 보여 드려요.</p>'}`;
+}
+
+function accountRow(a, asOf) {
+  const inst = INST[a.institution] || a.institution, r = a.ytd;
+  const late = a.as_of ? days(a.as_of, asOf) : 0;
+  const sub = r ? `올해 <b class="${tone(r.return)}">${apct(r.return)}</b> · 배당 제외 <b class="${tone(exDiv(r))}">${apct(exDiv(r))}</b>` : '';
+  return `<div class="acct-row"><div class="acct-top"><div class="avatar" aria-hidden="true">${esc(inst.slice(0, 2))}</div>
+    <div class="acct-grow"><div class="acct-name">${esc(a.name)}</div><div class="acct-meta">${esc(inst)}${a.kind === 'pension' ? ' · 연금' : ''}</div></div>
+    <div class="acct-right"><div class="acct-val num">${won(a.value)}</div>
+      <div class="acct-meta">${a.as_of ? a.as_of.slice(5).replace('-', '.') + ' 기준' : '평가액 없음'}${late > 7 ? `<span class="badge">${late}일 전</span>` : ''}</div></div></div>
+    ${sub ? `<div class="acct-sub num">${sub}</div>` : ''}
+    ${r?.return_usd != null ? `<div class="acct-sub num">달러 기준 <b class="${tone(r.return_usd)}">${apct(r.return_usd)}</b></div>` : ''}</div>`;
+}
+
+function drawCharts(s) {
+  if (!window.Chart) {
+    document.querySelectorAll('.chart-box').forEach(el => el.innerHTML = '<p class="hint">차트를 불러오지 못했어요. 인터넷 연결을 확인하세요.</p>');
+    return;
+  }
+  const cs = getComputedStyle(document.documentElement), c = n => cs.getPropertyValue('--' + n).trim();
+  const alpha = (hex, a) => `rgba(${[1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(',')},${a})`;
+  Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+  Chart.defaults.color = c('muted');
+  Chart.defaults.borderColor = c('line');
+  const opts = (fmt, extra = {}) => ({
+    responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'top', align: 'start', labels: { usePointStyle: true, pointStyle: 'rectRounded', boxWidth: 8, boxHeight: 8, color: c('sub') } },
+      tooltip: { callbacks: { label: x => ` ${x.dataset.label} ${fmt(x.parsed.y)}`, ...extra.tooltip } },
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, stacked: !!extra.stacked },
+      y: { grid: { color: c('line') }, border: { display: false }, ticks: { callback: fmt === won ? short : v => Math.round(v * 100) + '%', maxTicksLimit: 5 }, stacked: !!extra.stacked },
+    },
+  });
+  const draw = (id, cfg) => { state.charts[id]?.destroy(); state.charts[id] = new Chart($('#' + id), cfg); };
+
+  const ser = s.series;
+  draw('c-series', { type: 'line', data: { labels: ser.map(p => p.date.slice(2, 7).replace('-', '.')), datasets: [
+    { label: '평가액', data: ser.map(p => p.value), borderColor: c('text'), backgroundColor: c('text'), borderWidth: 2, pointRadius: 0, tension: 0.25,
+      fill: { target: 1, above: alpha(c('up'), 0.14), below: alpha(c('down'), 0.14) } },
+    { label: '누적 원금', data: ser.map(p => p.principal), borderColor: c('neutral'), backgroundColor: c('neutral'), borderDash: [4, 4], borderWidth: 2, pointRadius: 0 },
+  ] }, options: opts(won, { tooltip: { footer: xs => xs.length > 1 ? '투자수익 ' + won(xs[0].parsed.y - xs[1].parsed.y, true) : '' } }) });
+
+  const ys = s.years;
+  draw('c-years', { type: 'bar', data: { labels: ys.map(y => y.year + (y.partial ? '*' : '')), datasets: [
+    { type: 'line', label: '자산 증가율', data: ys.map(y => y.growth_rate), borderColor: c('s2'), backgroundColor: c('s2'), borderWidth: 2, pointRadius: 5, pointBorderColor: c('card'), pointBorderWidth: 2, stack: 'g', order: 0 },
+    { type: 'bar', label: '가격 변동', data: ys.map(y => exDiv(y)), backgroundColor: c('s1'), borderRadius: 4, borderColor: c('card'), borderWidth: 1, stack: 'r', order: 1, maxBarThickness: 36 },
+    { type: 'bar', label: '배당 기여', data: ys.map(y => divContrib(y)), backgroundColor: c('s3'), borderRadius: 4, borderColor: c('card'), borderWidth: 1, stack: 'r', order: 1, maxBarThickness: 36 },
+  ] }, options: opts(apct, { stacked: true, tooltip: { footer: xs => '투자수익률 ' + apct(ys[xs[0].dataIndex].return) } }) });
+
+  const [y0, m0] = s.as_of.split('-').map(Number), months = [];
+  for (let i = 23; i >= 0; i--) { const d = new Date(y0, m0 - 1 - i, 1); months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); }
+  draw('c-divs', { type: 'bar', data: { labels: months.map(m => m.slice(2).replace('-', '.')), datasets: [
+    { label: '배당금', data: months.map(m => s.dividends_by_month[m] || 0), backgroundColor: c('mint'), borderRadius: 4, maxBarThickness: 18 },
+  ] }, options: { ...opts(won), plugins: { ...opts(won).plugins, legend: { display: false } } } });
+}
+
+// holdings: live positions per account (GET /api/holdings, cached 60 s server-side)
+const qty = q => view.hide ? '••' : q.toLocaleString('ko-KR', { maximumFractionDigits: 6 });
+// a share price in its own currency: market data, not the user's money, so it skips won() and the hide toggle
+const native = (v, cur) => cur === 'KRW' ? Math.round(v).toLocaleString('ko-KR') + '원'
+  : (cur === 'USD' ? '$' : esc(cur) + ' ') + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const sum = (xs, k) => xs.reduce((t, x) => t + (x[k] || 0), 0);
+
+async function loadHoldings(refresh = false) {
+  const btn = $('#hd-refresh');
+  if (!state.holdings) $('#hd-body').innerHTML = '<div class="card hint">증권사에서 잔고를 불러오는 중… (10초쯤 걸려요)</div>';
+  btn.disabled = true; btn.textContent = '불러오는 중…';
+  try { state.holdings = await api('/api/holdings' + (refresh ? '?refresh=1' : '')); renderHoldings(); }
+  catch (e) {
+    if (state.holdings) toast('불러오지 못했어요: ' + e.message);
+    else $('#hd-body').innerHTML = `<div class="card hint">불러오지 못했어요: ${esc(e.message)}</div>`;
+  } finally { btn.disabled = state.cloud; btn.textContent = '새로고침'; }
+}
+$('#hd-refresh').onclick = () => loadHoldings(true);
+
+function renderHoldings() {
+  const h = state.holdings, box = $('#hd-body');
+  if (!h.accounts.length) {
+    box.innerHTML = '<div class="card"><h2>계좌가 없어요</h2><p class="hint">입력 탭에서 동기화하거나 계좌를 추가하세요.</p><button class="btn" data-go="input">입력하러 가기</button></div>';
+    return;
+  }
+  // color follows the account (ledger order), not its rank or whether it has a value today
+  // ponytail: 6 palette slots; a 7th account would repeat slot 1. Fold extras into "기타" if that day comes.
+  const accts = h.accounts.map((a, i) => ({ ...a, color: `var(--p${i % 6 + 1})`, slot: i % 6 + 1 }))
+    .sort((a, b) => (b.total_krw || 0) - (a.total_krw || 0));  // biggest first; colors were fixed above
+  // the donut by account or by asset class (classes.py); the choice is kept per device
+  const by = state.pieBy ??= (() => { try { return localStorage.getItem('pieBy'); } catch { return null; } })() || 'acct';
+  const cls = (h.classes || []).filter(c => c.value_krw > 0)
+    .map(c => ({ name: c.class, total_krw: c.value_krw, slot: CLASS_SLOT[c.class] || 6, color: `var(--p${CLASS_SLOT[c.class] || 6})` }));
+  const pie = by === 'class' && cls.length ? cls : accts.filter(a => a.total_krw > 0), total = sum(pie, 'total_krw');
+  const t = new Date(h.fetched_at);
+  box.innerHTML = `<article class="card">
+      <div class="tag-muted">전체 계좌</div><div class="hero-value num" style="font-size:30px;margin-top:6px">${won(total)}</div>
+      <div class="hero-meta">${t.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 조회 · 계좌 ${accts.length}개</div>
+      ${cls.length ? `<div class="chips" id="pie-by">${[['acct', '계좌별'], ['class', '자산 종류별']].map(([k, l]) =>
+        `<button type="button" class="chip${k === by ? ' on' : ''}" aria-pressed="${k === by}" data-pie="${k}">${l}</button>`).join('')}</div>` : ''}
+      ${pie.length ? `<div class="pie-wrap"><canvas id="c-pie" role="img" aria-label="${by === 'class' ? '자산 종류별' : '계좌별'} 평가액 비중"></canvas></div>
+      <ul class="pie-legend">${pie.map(a => `<li><i style="background:${a.color}"></i><span class="nm">${esc(a.name)}</span>
+        <b class="num">${pct(a.total_krw / total, false)}</b><span class="sub num">${won(a.total_krw)}</span></li>`).join('')}</ul>` : '<p class="hint">평가액이 있는 계좌가 아직 없어요.</p>'}
+    </article>` + accts.map(holdingCard).join('');
+  if (pie.length) drawPie(pie, total);
+}
+
+const CLASS_SLOT = { '주식': 1, '현금·예금': 2, '금': 3, '코인': 5, '채권': 6 };  // 금 gets the amber slot
+$('#hd-body').addEventListener('click', e => {
+  const b = e.target.closest('.chip[data-pie]');
+  if (!b || !state.holdings) return;
+  state.pieBy = b.dataset.pie;
+  try { localStorage.setItem('pieBy', state.pieBy); } catch {}
+  renderHoldings();
+  $(`#pie-by .chip[data-pie="${state.pieBy}"]`)?.focus();
+});
+
+function holdingCard(a) {
+  const inst = INST[a.institution] || a.institution, ps = a.positions;
+  const cost = sum(ps, 'cost_krw'), pnl = sum(ps, 'pnl_krw'), rest = a.total_krw == null ? null : a.total_krw - sum(ps, 'value_krw');
+  const exFx = ps.some(p => p.pnl_ex_fx);  // Toss: no KRW cost per item, so dollar P&L is at today's rate
+  const foreign = ps.some(p => p.currency !== 'KRW');  // KIS: KRW P&L includes FX (pnl_local_rate is the currency-only figure below)
+  const why = a.source === 'live' ? ''
+    : `<p class="hint">${a.error ? `실시간 조회 실패: ${esc(a.error)}<br>` : '실시간 잔고를 지원하지 않는 계좌예요. '}${a.as_of ? kdate(a.as_of) + ' 평가액이에요.' : '평가액 기록이 없어요.'}</p>`;
+  const row = (name, meta, value, sub = '') => `<div class="pos-row"><div class="pos-grow"><div class="pos-name">${name}</div><div class="pos-meta">${meta}</div></div>
+    <div class="pos-right"><div class="pos-val num">${value}</div>${sub}</div></div>`;
+  return `<article class="card">
+    <div class="hd-top"><h2>${esc(a.name)}</h2><span class="tag-muted">${esc(inst)}${a.source === 'live' ? '' : ' · 최근 평가액'}</span></div>
+    <div class="hd-hero"><span class="v num">${won(a.total_krw)}</span>${ps.length ? `<span class="hd-chip ${tone(pnl)} num"${exFx ? ' title="환율 변동 제외"' : ''}>${apct(cost ? pnl / cost : null)}</span>` : ''}</div>
+    ${ps.length ? `<div class="hd-sub">평가손익${exFx ? '(환율 변동 제외)' : foreign ? '(환율 변동 포함)' : ''} <b class="${tone(pnl)} num">${won(pnl, true)}</b> · 매입 <span class="num">${won(cost)}</span></div>` : ''}
+    ${exFx ? '<p class="hint">달러 종목은 현재 환율로 환산했어요. 환차손익은 빠져 있어요.</p>' : foreign ? '<p class="hint">원화 손익은 환율 변동을 포함해요.</p>' : ''}${why}
+    ${a.source === 'live' ? ps.map(p => row(
+        `<span>${esc(p.name)}</span>${p.annual_div_krw > 0 ? `<span class="yield-tag">배당 ${pct(p.div_yield, false)}</span>` : ''}`,
+        `${esc(p.symbol)} · ${qty(p.quantity)}주 · ${native(p.price, p.currency)}`, won(p.value_krw),
+        `<div class="pos-pnl ${tone(p.pnl_krw)} num">${won(p.pnl_krw, true)} (${apct(p.pnl_rate)})</div>`
+        + (p.currency !== 'KRW' && !p.pnl_ex_fx && p.pnl_local_rate != null ? `<div class="pos-pnl ${tone(p.pnl_local_rate)} num">${p.currency === 'USD' ? '$' : esc(p.currency)} 기준 ${apct(p.pnl_local_rate)}</div>` : ''))).join('')
+      + (Math.abs(rest) >= 1 ? row('현금·기타', '예수금·외화·RP 등', won(rest)) : '')
+      + (ps.length ? '' : '<p class="hint">보유 종목이 없어요.</p>') : ''}
+  </article>`;
+}
+
+function drawPie(pie, total) {
+  state.charts['c-pie']?.destroy();
+  if (!window.Chart) { $('.pie-wrap').innerHTML = '<p class="hint">차트를 불러오지 못했어요. 인터넷 연결을 확인하세요.</p>'; return; }
+  const cs = getComputedStyle(document.documentElement), c = n => cs.getPropertyValue('--' + n).trim();
+  state.charts['c-pie'] = new Chart($('#c-pie'), { type: 'doughnut',
+    data: { labels: pie.map(a => a.name), datasets: [{ data: pie.map(a => a.total_krw),
+      backgroundColor: pie.map(a => c('p' + a.slot)), borderColor: c('card'), borderWidth: 2, hoverOffset: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '62%',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: x => ` ${won(x.parsed)} · ${pct(x.parsed / total, false)}` } } } } });
+}
+
+// review
+$('#rv-filter').innerHTML = '<option value="UNKNOWN">미분류만</option><option value="">전체 (최근 200건)</option>' +
+  Object.entries(KIND).filter(([k]) => k !== 'UNKNOWN').map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+$('#rv-filter').onchange = loadReview;
+document.querySelectorAll('.kind-select').forEach(s => s.innerHTML = Object.entries(KIND).filter(([k]) => k !== 'UNKNOWN').map(([k, v]) => `<option value="${k}">${v}</option>`).join(''));
+
+async function loadReview() {
+  const k = $('#rv-filter').value;
+  let rows = [];
+  // on the Worker, none left as the summary says: no request (there this list is a scan of the whole ledger)
+  if (!(state.cloud && k === 'UNKNOWN' && state.summary?.unknown_count === 0)) {
+    try { rows = await api('/api/transactions?limit=200' + (k ? '&kind=' + k : '')); }
+    catch (e) { state.review = null; $('#rv-list').innerHTML = `<div class="card hint">${esc(e.message)}</div>`; return; }
+  }
+  if ($('#rv-filter').value !== k) return;  // the filter moved on while this loaded
+  state.review = { k, rows }; renderReview();
+}
+// A change the Worker only queued (state.queued) is marked and locked until a reload, so it isn't sent twice; a card
+// still waiting for its answer (state.busy) stays locked through re-renders too.
+function renderReview() {
+  if (!state.review) return;
+  const { k, rows } = state.review, names = Object.fromEntries(state.accounts.map(a => [a.id, a.name]));
+  $('#rv-list').innerHTML = rows.length ? rows.map(t => `<div class="card tx" data-id="${t.id}">
+      <div class="tx-top"><span class="tx-memo">${esc(t.memo || '(적요 없음)')}</span><span class="tx-amt ${tone(t.amount)} num">${won(t.amount, true)}</span></div>
+      <div class="tx-meta"><span class="k-tag${t.kind === 'DIVIDEND' ? ' div' : ''}">${esc(KIND[t.kind] || t.kind)}</span>
+        <span>${t.date} · ${esc(names[t.account_id] || t.account_id)} · ${esc(t.source)}${t.kind_locked ? ' · 직접 분류함' : ''}${state.queued.has(t.id) ? '<span class="badge">반영 대기</span>' : ''}</span></div>
+      ${t.raw && !view.hide ? `<details><summary>원본 데이터</summary><pre>${esc(t.raw)}</pre></details>` : ''}
+      <fieldset${state.queued.has(t.id) || state.busy.has(t.id) ? ' disabled' : ''}><div class="ctl"><select aria-label="분류">${Object.entries(KIND).map(([kk, v]) => `<option value="${kk}"${kk === t.kind ? ' selected' : ''}>${v}</option>`).join('')}</select>
+        <input inputmode="numeric" aria-label="금액 수정 (원)" ${usdRate() ? 'placeholder="금액 수정은 ₩ 보기에서" disabled' : 'placeholder="금액 수정 (원, 선택)"'}></div>
+      <div class="acts">${t.source === 'manual' ? '<button class="sbtn danger" data-act="del">삭제</button>' : ''}<button class="sbtn" data-act="save">저장</button></div></fieldset>
+    </div>`).join('')
+    : `<div class="card hint">${k === 'UNKNOWN' ? '분류할 거래가 없어요. 모두 정리됐어요.' : '거래가 없어요.'}</div>`;
+}
+$('#rv-list').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const card = b.closest('.tx'), id = card.dataset.id, ctl = $('fieldset', card);
+  state.busy.add(+id); ctl.disabled = true;  // until this tap is answered: a second one would send it again
+  try {
+    let ok;
+    if (b.dataset.act === 'del') {
+      if (!confirm('이 거래를 삭제할까요?')) return;
+      ok = done(await api(`/api/transactions/${id}`, { method: 'DELETE' }), '삭제했어요');
+    } else {
+      const kind = $('select', card).value, amount = signFor(kind, num($('input', card).value));
+      ok = done(await api(`/api/transactions/${id}`, { method: 'PATCH', body: JSON.stringify(amount == null ? { kind } : { kind, amount }) }),
+        '분류를 저장했어요');
+    }
+    if (ok) { await load(); loadReview(); } else { state.queued.add(+id); renderReview(); }
+  } catch (err) { toast(err.message); } finally {
+    state.busy.delete(+id);
+    const cur = $(`#rv-list .tx[data-id="${id}"] fieldset`); if (cur) cur.disabled = state.queued.has(+id);  // re-rendered meanwhile
+  }
+});
+
+// input
+function formJSON(form) { return Object.fromEntries(new FormData(form)); }
+function onSubmit(id, fn) {
+  $(id).addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = $('button.btn', e.target); btn.disabled = true;
+    try { await fn(e.target); } catch (err) { toast(err.message); } finally { btn.disabled = false; }
+  });
+}
+onSubmit('#f-snap', async f => {
+  const d = formJSON(f), snap = { account_id: d.account_id, date: d.date, value: num(d.value), cash: num(d.cash) };
+  let r;
+  try { r = await api('/api/snapshots', { method: 'POST', body: JSON.stringify(snap) }); }
+  catch (err) {  // a DC value far from the model is more likely a typo: save it only when the user says so
+    if (err.detail?.code !== 'dc_mismatch') throw err;
+    if (!confirm(err.detail.message)) return;
+    r = await api('/api/snapshots', { method: 'POST', body: JSON.stringify({ ...snap, force: true }) });
+  }
+  const ok = done(r, '평가액을 저장했어요'); f.value.value = ''; f.cash.value = '';
+  if (ok) { await load(); loadSnaps(); }
+});
+onSubmit('#f-gold', async f => {
+  const d = formJSON(f), grams = parseFloat(String(d.grams).replace(/,/g, ''));
+  const ok = done(await api('/api/gold', { method: 'POST', body: JSON.stringify({ date: d.date, grams, cost: num(d.cost) }) }),
+    '금현물 보유를 저장했어요');
+  f.grams.value = ''; f.cost.value = '';
+  if (ok) await load();
+});
+onSubmit('#f-tx', async f => {
+  const d = formJSON(f);
+  const ok = done(await api('/api/transactions', { method: 'POST', body: JSON.stringify({ ...d, amount: signFor(d.kind, num(d.amount)) }) }),
+    '거래를 추가했어요');
+  f.amount.value = ''; f.memo.value = '';
+  if (ok) await load();
+});
+onSubmit('#f-import', async f => {
+  const file = f.file.files[0], out = $('#im-out');
+  const r = await api(`/api/import?account_id=${encodeURIComponent(f.account_id.value)}&fmt=${encodeURIComponent(f.fmt.value)}`,
+    { method: 'POST', body: file, headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) } });
+  if (done(r, r?.unknown ? '가져왔어요. 검토 탭에서 미분류 거래를 확인하세요' : '가져왔어요')) {
+    out.hidden = false;
+    out.textContent = r?.imported == null ? JSON.stringify(r, null, 2)
+      : `${r.imported}건 가져옴 · 미분류 ${r.unknown ?? 0}건 · 건너뜀 ${r.skipped ?? 0}건` + (r.replaced_estimates ? ` · 추정치 ${r.replaced_estimates}건 대체` : '')
+        + (r.replaced_edited?.length ? '\n직접 고친 추정치도 파일 값으로 바뀌었어요:\n'
+          + r.replaced_edited.map(e => `${e.date} ${KIND[e.kind] || e.kind} ${won(e.amount, true)} ${e.memo || ''}`).join('\n') : '');
+    await load();
+  }
+  try { localStorage.setItem('im-acct:' + f.fmt.value, f.account_id.value); } catch {}
+});
+// Phone uploads: pick the format from the file type, then the account last used for it (or the broker's own).
+const FMT_INST = { toss_pdf: 'toss', kis_xlsx: 'kis' };
+function guessImportAccount() {
+  const f = $('#f-import'), fmt = f.fmt.value;
+  let acc = null;
+  try { acc = localStorage.getItem('im-acct:' + fmt); } catch {}
+  if (!state.accounts.some(a => a.id === acc)) acc = state.accounts.find(a => a.institution === FMT_INST[fmt])?.id;
+  if (acc) f.account_id.value = acc;
+}
+$('#f-import').file.onchange = e => {
+  const name = e.target.files[0]?.name.toLowerCase() || '', f = $('#f-import');
+  const fmt = name.endsWith('.pdf') ? 'toss_pdf' : /\.xlsx?$/.test(name) ? 'kis_xlsx' : name.endsWith('.csv') ? (f.fmt.value === 'kis_xlsx' ? 'kis_xlsx' : 'csv') : null;
+  if (fmt && [...f.fmt.options].some(o => o.value === fmt)) f.fmt.value = fmt;
+  guessImportAccount();
+};
+$('#f-import').fmt.onchange = guessImportAccount;
+// The Worker queues at most 1.4 MB per request, so in cloud mode a file goes as 1 MB parts (one queued op each) that
+// the PC puts back together in inbox/ (web.py inbox_part). A dropped connection is retried; a refusal is not.
+const PART = 1_000_000, MAX_PARTS = 600;
+async function sendParts(file, progress) {
+  const id = [...crypto.getRandomValues(new Uint8Array(8))].map(b => b.toString(16).padStart(2, '0')).join('');
+  const n = Math.max(1, Math.ceil(file.size / PART));
+  if (n > MAX_PARTS) throw new Error(`${file.name}: ${MAX_PARTS}MB보다 커서 보낼 수 없어요`);
+  for (let i = 0; i < n; i++) {
+    progress(i, n);
+    for (let tries = 0; ; tries++) {
+      try {
+        await api(`/api/inbox/part?upload=${id}&i=${i}&n=${n}`, { method: 'POST', quiet: true,
+          body: file.slice(i * PART, (i + 1) * PART),
+          headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) } });
+        break;
+      } catch (e) { if (e.status || tries >= 2) throw e; }
+    }
+  }
+}
+onSubmit('#f-inbox', async f => {
+  const out = $('#inbox-out'), files = [...f.files.files], done = [];
+  out.hidden = false;
+  for (const [i, file] of files.entries()) {
+    out.textContent = `${i + 1}/${files.length} 보내는 중: ${file.name}`;
+    if (state.cloud) {
+      await sendParts(file, (k, n) => { out.textContent = `${i + 1}/${files.length} 보내는 중: ${file.name} (${k + 1}/${n})`; });
+    } else {
+      await api('/api/inbox', { method: 'POST', body: file,
+        headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) } });
+    }
+    done.push(file.name);
+  }
+  out.textContent = `${done.length}개 보냄\n` + done.join('\n');
+  if (state.cloud) { toast('보냈어요. PC가 켜지면 inbox에 저장돼요'); loadMeta(); } else toast('서버로 보냈어요');
+  f.reset();
+});
+onSubmit('#f-acct', async f => {
+  const d = formJSON(f);
+  const ok = done(await api('/api/accounts', { method: 'POST', body: JSON.stringify(d) }), '계좌를 추가했어요'); f.reset();
+  if (ok) await load();
+});
+$('#f-acct').institution.onchange = e => { const id = $('#f-acct').elements.id; if (!id.value || id.value.endsWith(':')) id.value = e.target.value + ':'; };
+$('#f-snap').account_id.onchange = () => { $('#snap-list').innerHTML = ''; loadSnaps(); };
+
+async function loadSnaps() {
+  const acc = $('#f-snap').account_id.value;
+  const rows = acc ? await api(`/api/snapshots?account_id=${encodeURIComponent(acc)}&limit=12`).catch(() => null) : null;
+  if ($('#f-snap').account_id.value !== acc) return;  // the select moved on while this loaded
+  state.snaps = rows && { acc, rows }; renderSnaps();
+}
+function renderSnaps() {
+  const s = state.snaps, ul = $('#snap-list');
+  if (s?.acc !== $('#f-snap').account_id.value) { ul.innerHTML = ''; return; }  // nothing fetched for the account now selected
+  ul.innerHTML = s.rows.map(r => `<li><span>${r.date} <span class="meta">${r.source === 'manual' ? '직접 입력' : esc(r.source)}</span></span>
+    <span>${won(r.value)} ${state.queued.has(`snap:${s.acc}:${r.date}`) ? '<span class="badge">반영 대기</span>'
+      : r.source === 'manual' ? `<button type="button" class="sbtn danger" data-acc="${esc(s.acc)}" data-date="${r.date}">삭제</button>` : ''}</span></li>`).join('');
+}
+$('#snap-list').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-date]'), name = b && state.accounts.find(a => a.id === b.dataset.acc)?.name;
+  if (!b || !confirm(`${name || b.dataset.acc} ${b.dataset.date} 평가액을 삭제할까요?`)) return;
+  try {
+    if (done(await api(`/api/snapshots?account_id=${encodeURIComponent(b.dataset.acc)}&date=${b.dataset.date}`, { method: 'DELETE' }), '삭제했어요')) {
+      await load(); loadSnaps();
+    } else { state.queued.add(`snap:${b.dataset.acc}:${b.dataset.date}`); renderSnaps(); }
+  } catch (err) { toast(err.message); }
+});
+
+async function loadFormats() {
+  if (state.formats) return;
+  const sel = $('#im-fmt');
+  try {
+    const f = await api('/api/import/formats');
+    state.formats = Array.isArray(f) ? f.map(k => [k, k]) : Object.entries(f).map(([k, v]) => [k, typeof v === 'string' ? v : v?.label || v?.name || k]);
+    sel.innerHTML = state.formats.map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join('');
+  } catch (e) {
+    sel.innerHTML = '<option value="">사용할 수 없음</option>';
+    $('#im-hint').textContent = '파일 가져오기를 사용할 수 없어요: ' + e.message;
+    $('#f-import button.btn').disabled = true;
+  }
+}
+
+$('#sync-btn').onclick = async e => {
+  const b = e.target, label = b.textContent;  // '동기화 요청' in cloud mode
+  b.disabled = true; b.textContent = '동기화 중…';
+  try {
+    const r = await api('/api/sync', { method: 'POST' });
+    if (done(r)) { state.sync = r; renderSync(); await load(); }
+  } catch (err) { toast(err.message); }
+  finally { b.disabled = false; b.textContent = label; }
+};
+// Broker reports are raw text ("ok: 412 shares + 3,210원 cash = 54,321,000원"): the hide toggle masks every number.
+function renderSync() {
+  const label = v => v.startsWith('ok') ? '완료' : v.startsWith('skipped') ? '키 미설정' : '오류';
+  $('#sync-out').innerHTML = Object.entries(state.sync || {}).map(([k, v]) => `<li><b>${esc(INST[k] || k)}</b><span class="meta" style="text-align:right">${label(v)} · ${esc(mask(v))}</span></li>`).join('');
+}
+
+$('#logout-btn').onclick = async () => {  // cloud mode only
+  await forget();
+  location.replace('/cdn-cgi/access/logout');  // ends the Cloudflare Access session
+};
+
+// tabs
+function show(tab) {
+  if (!['home', 'holdings', 'review', 'input'].includes(tab)) tab = 'home';
+  document.querySelectorAll('.tab').forEach(s => s.hidden = s.id !== 'tab-' + tab);
+  document.querySelectorAll('.tabbar button').forEach(b => b.setAttribute('aria-current', b.dataset.go === tab ? 'page' : 'false'));
+  // cloud mode: what the Worker serves changes only with the PC's next push (every 15 min), so a revisit keeps what
+  // this page already fetched; the review filter, the account select and a reload still fetch
+  const keep = state.cloud;
+  if (tab === 'holdings' && !(keep && state.holdings)) loadHoldings();
+  if (tab === 'review' && !(keep && state.review)) loadReview();
+  if (tab === 'input') { loadFormats(); if (!(keep && state.snaps)) loadSnaps(); }
+  history.replaceState(null, '', '#' + tab);
+  scrollTo(0, 0);
+}
+document.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) show(g.dataset.go); });
+// the mode is known before a tab loads, but an unreachable PC must not hold the first tab forever: race meta
+// against 1s once load() (which sw.js answers from its saved copy) is in; a saved cloud meta still answers by then.
+const meta0 = loadMeta();
+load().then(() => Promise.race([meta0, new Promise(r => setTimeout(r, 1000))])).then(() => show(location.hash.slice(1)));
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});  // needs https (the Worker) or localhost
+</script>
+</body>
+</html>
