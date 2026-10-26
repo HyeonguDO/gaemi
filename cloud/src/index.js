@@ -46,7 +46,7 @@ const STATE_KEYS = new Set([...Object.values(READS), 'snapshots'])
 const MONTH = /^transactions-\d{4}-\d{2}$/  // one month of transactions, the only other state key
 const MONTHS = ['transactions-0000-00', 'transactions-9999-99']  // the key range holding every MONTH key, and no other
 // the writes web.py has, as "METHOD /path"
-const WRITE = /^(POST \/api\/(transactions|snapshots|accounts|import|sync|inbox\/part|gold)|(PATCH|DELETE) \/api\/transactions\/\d+|DELETE \/api\/snapshots)$/
+const WRITE = /^(POST \/api\/(transactions|snapshots|accounts|import|sync|inbox\/part|gold)|(PATCH|DELETE) \/api\/transactions\/\d+|DELETE \/api\/snapshots|DELETE \/api\/accounts\/[\w.:@%-]+)$/
 const LOCAL = new Set(['localhost', '127.0.0.1', '[::1]'])
 const RS256 = { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }
 

@@ -387,6 +387,14 @@ try {
         ['POST', '/api/inbox/part', 'upload=0123456789abcdef&i=1&n=2', encodeURIComponent('녹화.mp4'), 'abc'])
       assert.equal((await pc('POST', `/pc/ops/${op.id}`, { status: 'done' })).status, 200)
     })
+    await ok('an account delete is queued with its id as sent', async () => {
+      const r = await send('DELETE', '/api/accounts/manual%3Asavings')
+      assert.equal(r.status, 202)
+      const op = (await pc('GET', '/pc/ops?after=8')).json().ops.find(o => o.id === r.json().queued)
+      assert.deepEqual([op.method, op.path], ['DELETE', '/api/accounts/manual%3Asavings'])
+      assert.equal((await pc('POST', `/pc/ops/${op.id}`, { status: 'done' })).status, 200)
+      assert.equal((await send('DELETE', '/api/accounts/a/b')).status, 404)
+    })
   } finally {
     w.stop()
   }

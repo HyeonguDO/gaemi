@@ -182,6 +182,7 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .btn { display: block; width: 100%; height: 52px; margin-top: 16px; border: 0; border-radius: 14px; background: var(--accent);
   color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
 .btn:disabled { opacity: 0.5; cursor: default; }
+.btn.danger { background: var(--up); }
 .sbtn { height: 40px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--card);
   color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
 .sbtn.danger { color: var(--up); border-color: var(--up-soft); }
@@ -347,6 +348,12 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
       <label>이름<input name="name" required maxlength="60" placeholder="하나은행 DC 퇴직연금"></label>
       <button class="btn">추가</button>
     </form>
+    <form class="card" id="f-del-acct">
+      <h2>계좌 삭제</h2>
+      <p class="hint">계좌와 그 계좌의 거래·평가액을 모두 지워요. 되돌릴 수 없어요. 증권사 API로 동기화되는 계좌는 .env에서 그 증권사 키를 먼저 지워야 지울 수 있어요.</p>
+      <label>계좌<select name="account_id" class="acct-select" required></select></label>
+      <button class="btn danger">삭제</button>
+    </form>
     <div class="card" id="logout-card" hidden>
       <h2>로그아웃</h2>
       <p class="hint">이 기기에 저장해 둔 화면도 함께 지워요.</p>
@@ -486,7 +493,7 @@ async function loadMeta() {
   state.meta = m; renderMeta();
 }
 const OPS = { 'POST /api/snapshots': '평가액 입력', 'DELETE /api/snapshots': '평가액 삭제', 'POST /api/transactions': '거래 추가',
-  'PATCH /api/transactions': '거래 분류', 'DELETE /api/transactions': '거래 삭제', 'POST /api/accounts': '계좌 추가',
+  'PATCH /api/transactions': '거래 분류', 'DELETE /api/transactions': '거래 삭제', 'POST /api/accounts': '계좌 추가', 'DELETE /api/accounts': '계좌 삭제',
   'POST /api/import': '파일 가져오기', 'POST /api/sync': '동기화 요청' };
 // "9월 26일 00:05" in KST, whatever offset the ISO time carries
 function kst(iso) {
@@ -499,7 +506,7 @@ function kst(iso) {
 function renderMeta() {
   const m = state.meta, el = $('#cloud');
   if (!m) return;
-  const op = o => OPS[`${o.method} ${o.path.replace(/\/\d+$/, '')}`] || `${o.method} ${o.path}`;
+  const op = o => OPS[`${o.method} ${o.path.replace(/^(\/api\/accounts)\/.+$|\/\d+$/, '$1')}`] || `${o.method} ${o.path}`;
   el.hidden = false;
   el.innerHTML = esc((m.pushed_at ? `PC 동기화 기준 ${kst(m.pushed_at)}` : 'PC에서 아직 올라온 데이터가 없어요')
       + (m.pending > 0 ? ` · 반영 대기 ${m.pending}건` : ''))
@@ -998,6 +1005,11 @@ onSubmit('#f-acct', async f => {
   const d = formJSON(f);
   const ok = done(await api('/api/accounts', { method: 'POST', body: JSON.stringify(d) }), '계좌를 추가했어요'); f.reset();
   if (ok) await load();
+});
+onSubmit('#f-del-acct', async f => {
+  const a = state.accounts.find(a => a.id === f.account_id.value);
+  if (!a || !confirm(`'${a.name}' 계좌와 그 계좌의 거래·평가액을 모두 지울까요? 되돌릴 수 없어요.`)) return;
+  if (done(await api(`/api/accounts/${encodeURIComponent(a.id)}`, { method: 'DELETE' }), '계좌를 삭제했어요')) await load();
 });
 $('#f-acct').institution.onchange = e => { const id = $('#f-acct').elements.id; if (!id.value || id.value.endsWith(':')) id.value = e.target.value + ':'; };
 $('#f-snap').account_id.onchange = () => { $('#snap-list').innerHTML = ''; loadSnaps(); };

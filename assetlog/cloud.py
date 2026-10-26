@@ -54,7 +54,7 @@ TIMEOUT = (10, 60)  # s: connect, read (an answer can carry ~2 MB of uploads)
 MAX_ITEM = 1_900_000  # bytes of JSON the Worker takes per state item (a D1 row tops out near 2 MB)
 HOLDINGS_PERIOD = 3600  # s between holdings pushes, absent a reason to push it sooner
 WRITES = re.compile(r"POST /api/(transactions|snapshots|accounts|import|sync|inbox/part|gold)|(PATCH|DELETE) /api/transactions/\d+"
-                    r"|DELETE /api/snapshots")  # the writes web.py has, as the Worker queues them
+                    r"|DELETE /api/snapshots|DELETE /api/accounts/[\w.:@%-]+")  # the writes web.py has, as the Worker queues them
 READS = {"summary": "/api/summary", "accounts": "/api/accounts", "holdings": "/api/holdings",
          "transactions": "/api/transactions?limit=100000", "snapshots": "/api/snapshots?limit=5000",
          "formats": "/api/import/formats"}  # each its own state key, but transactions: one per month (MONTH)

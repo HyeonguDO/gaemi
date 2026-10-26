@@ -232,6 +232,30 @@ def add_account(a: AccountIn):
     return {"id": a.id}
 
 
+@app.delete("/api/accounts/{account_id}")
+def delete_account(account_id: AccountId):
+    """Remove an account with every row of it. Refused where the next sync would bring it back half-built: an account
+    of a broker whose API keys are set (recreated with only recent history) and DC_ACCOUNT (the DC model's rows)."""
+    from . import sync  # BROKERS; imported late like /api/sync
+    cfg = config.load()
+    with ledger() as conn:
+        row = conn.execute("SELECT institution FROM accounts WHERE id = ?", (account_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, f"unknown account {account_id!r}")
+        mod = sync.BROKERS.get(row["institution"])
+        if mod and all(cfg.get(k) for k in mod.REQUIRED):
+            raise HTTPException(400, "증권사 API로 동기화되는 계좌라 지워도 다음 동기화 때 다시 생겨요. "
+                                     "먼저 .env에서 그 증권사 키를 지우세요")
+        if account_id == cfg.get("DC_ACCOUNT"):
+            raise HTTPException(400, "DC 모델 계좌라 지우면 다음 동기화가 실패해요. 먼저 .env에서 DC_ACCOUNT를 지우세요")
+        conn.execute("PRAGMA secure_delete = ON")  # zero the deleted rows in the file, not just mark the pages free
+        # ponytail: the tables that reference accounts(id); a new one fails this DELETE (foreign keys) until added here
+        n = {t: conn.execute(f"DELETE FROM {t} WHERE account_id = ?", (account_id,)).rowcount
+             for t in ("transactions", "snapshots", "cash_obs", "gold_facts", "coverage")}
+        conn.execute("DELETE FROM accounts WHERE id = ?", (account_id,))
+    return {"deleted": account_id, "rows": n}
+
+
 @app.get("/api/transactions")
 def transactions(kind: Kind | None = None, account_id: AccountId | None = None,
                  limit: Annotated[int, Query(ge=1, le=100_000)] = 200):  # cloud.py reads it all: ~130 years

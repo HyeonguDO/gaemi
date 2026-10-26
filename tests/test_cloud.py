@@ -170,6 +170,15 @@ def test_ops_applied_through_the_app_and_state_pushed(ledger, monkeypatch):
     assert stat.S_IMODE(os.stat(ledger / "cloud.json").st_mode) == 0o600
 
 
+
+def test_account_delete_from_the_phone(ledger, monkeypatch):
+    w = Worker([op(1, "DELETE", "/api/accounts/kb%3Ademo-01")])  # the page's encodeURIComponent, as the Worker kept it
+    run(monkeypatch, w)
+    assert w.results[1]["status"] == "done"
+    assert not rows("SELECT 1 FROM accounts WHERE id = 'kb:demo-01'")
+    assert not rows("SELECT 1 FROM transactions WHERE account_id = 'kb:demo-01'")
+    assert "kb:demo-01" not in {a["id"] for a in w.state["items"]["accounts"]}
+
 def test_never_reapplied_and_lost_reports_retried(ledger, monkeypatch):
     ops = [op(7, "POST", "/api/transactions", {"account_id": "kb:demo-01", "date": "2026-09-24", "kind": "DEPOSIT",
                                               "amount": 5000})]

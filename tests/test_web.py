@@ -143,6 +143,29 @@ def test_delete_refuses_non_manual(client):
     assert rows("SELECT id FROM transactions WHERE id = ?", t["id"])
 
 
+
+def test_delete_account_removes_every_row(client):
+    aid = "kb:demo-01"
+    assert rows("SELECT 1 FROM transactions WHERE account_id = ?", aid) and rows("SELECT 1 FROM snapshots WHERE account_id = ?", aid)
+    r = client.delete(f"/api/accounts/{aid}")
+    assert r.status_code == 200 and r.json()["deleted"] == aid and r.json()["rows"]["transactions"] > 0
+    for t in ("transactions", "snapshots", "cash_obs", "gold_facts", "coverage"):
+        assert not rows(f"SELECT 1 FROM {t} WHERE account_id = ?", aid), t
+    assert aid not in [a["id"] for a in client.get("/api/accounts").json()]
+    assert client.get("/api/summary").status_code == 200
+    assert client.delete(f"/api/accounts/{aid}").status_code == 404
+
+
+def test_delete_account_refuses_what_a_sync_rebuilds(client, monkeypatch):
+    keys = dict.fromkeys(sync.BROKERS["kis"].REQUIRED, "x")
+    monkeypatch.setattr(web.config, "load", lambda *a, **k: {**keys, "DC_ACCOUNT": "hana:dc"})
+    for aid, word in (("kis:demo-01", "증권사 키"), ("hana:dc", "DC_ACCOUNT")):
+        r = client.delete(f"/api/accounts/{aid}")
+        assert r.status_code == 400 and word in r.json()["detail"], aid
+        assert rows("SELECT 1 FROM accounts WHERE id = ?", aid)
+    assert client.delete("/api/accounts/toss:demo-01").status_code == 200  # toss keys unset: nothing brings it back
+
+
 def test_invalid_kind_rejected(client):
     body = {"account_id": "hana:dc", "date": "2026-01-15", "kind": "BOGUS", "amount": 1}
     assert client.post("/api/transactions", json=body).status_code == 422
