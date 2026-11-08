@@ -105,7 +105,7 @@ const SNAPS = [{ account_id: 'kis', date: '2026-09-25', value: 100, cash: null, 
   { account_id: 'toss', date: '2026-09-25', value: 200, cash: 5, source: 'toss' },
   { account_id: 'kis', date: '2026-08-31', value: 90, cash: 1, source: 'manual' }]
 const ITEMS = { summary: { total: 300, note: '총자산' }, accounts: [{ id: 'kis', institution: 'kis', name: '한투', kind: 'brokerage' }],
-  holdings: { fetched_at: '2026-09-26T23:50:00+09:00', accounts: [] }, formats: { toss_pdf: '토스 PDF' },
+  holdings: { fetched_at: '2026-09-26T23:50:00+09:00', accounts: [] }, formats: { toss_pdf: '토스 PDF' }, fire: { age: 35 },
   ...Object.fromEntries(Object.entries(MONTHS).reverse()), snapshots: SNAPS }  // oldest month first: order is the key's
 const PUSHED_AT = '2026-09-26T23:50:01+09:00'
 
@@ -156,7 +156,7 @@ try {
         background_color: '#f2f4f6', theme_color: '#f2f4f6', icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml' }] })
     })
     await ok('reads before any push: 503 with the Korean detail', async () => {
-      for (const p of ['/api/summary', '/api/accounts', '/api/holdings', '/api/import/formats', '/api/transactions', '/api/snapshots']) {
+      for (const p of ['/api/summary', '/api/accounts', '/api/holdings', '/api/import/formats', '/api/fire', '/api/transactions', '/api/snapshots']) {
         const r = await get(p)
         assert.equal(r.status, 503, p)
         assert.deepEqual(r.json(), { detail: '아직 PC에서 올라온 데이터가 없어요' })
@@ -207,6 +207,7 @@ try {
       assert.deepEqual((await get('/api/accounts')).json(), ITEMS.accounts)
       assert.deepEqual((await get('/api/holdings?refresh=1')).json(), ITEMS.holdings)
       assert.deepEqual((await get('/api/import/formats')).json(), ITEMS.formats)
+      assert.deepEqual((await get('/api/fire')).json(), ITEMS.fire)
       assert.equal((await get('/api/meta')).json().pushed_at, PUSHED_AT)
     })
     await ok('PUT /pc/state/<key> overwrites, and invalid JSON keeps what is stored', async () => {

@@ -7,7 +7,7 @@
 // and wipes every saved copy, as does logout. Offline, the last copy still shows even if the Access session expired
 // since: only the server can say so (keeping it readable offline is this file's purpose).
 const CACHE = 'assetlog-v1'
-const READS = { '/api/summary': 5000, '/api/accounts': 5000, '/api/holdings': 30000, '/api/meta': 5000 }  // ms to wait; broker reads take ~10 s
+const READS = { '/api/summary': 5000, '/api/accounts': 5000, '/api/holdings': 30000, '/api/meta': 5000, '/api/fire': 5000 }  // ms to wait; broker reads take ~10 s
 const PAGE_WAIT = 5000
 const DOWN_WAIT = 1500  // after one miss, wait only this long for 30 s: a server that is back still answers in time
 let downUntil = 0

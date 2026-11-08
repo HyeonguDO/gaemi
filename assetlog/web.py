@@ -11,6 +11,7 @@ writes through this app in-process. local_only guards every request, and every r
   start broker reads).
 """
 import ipaddress
+import json
 import logging
 import math
 import re
@@ -355,6 +356,23 @@ def _principal(conn, account_id):
         principal.rebuild(conn, account_id, today())
     elif account_id == gold.account(cfg):
         gold.rebuild(conn, cfg, account_id, today())
+
+
+FIRE = "fire.json"  # the FIRE tab's plan (ages, target, contributions, assumptions); the page simulates it
+
+
+@app.get("/api/fire")
+def fire_plan():
+    return cloud._read(FIRE, None)
+
+
+@app.post("/api/fire")
+def save_fire_plan(plan: dict):
+    # ponytail: kept as sent; only the page reads it, and it normalizes every field before simulating (fireNorm)
+    if len(json.dumps(plan)) > 20_000:
+        raise HTTPException(413, "plan too large")
+    cloud._write(FIRE, plan)
+    return {"saved": True}
 
 
 @app.post("/api/gold")

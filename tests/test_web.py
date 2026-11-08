@@ -166,6 +166,17 @@ def test_delete_account_refuses_what_a_sync_rebuilds(client, monkeypatch):
     assert client.delete("/api/accounts/toss:demo-01").status_code == 200  # toss keys unset: nothing brings it back
 
 
+
+def test_fire_plan_round_trip(client):
+    assert client.get("/api/fire").json() is None  # nothing saved: the page starts from its defaults
+    plan = {"age": 35, "items": [{"name": "S&P 500", "match": "VOO", "amount": 10000}]}
+    assert client.post("/api/fire", json=plan).json() == {"saved": True}
+    assert client.get("/api/fire").json() == plan
+    assert client.post("/api/fire", json={"note": "x" * 20_001}).status_code == 413
+    assert client.post("/api/fire", json=[plan]).status_code == 422
+    assert client.get("/api/fire").json() == plan
+
+
 def test_invalid_kind_rejected(client):
     body = {"account_id": "hana:dc", "date": "2026-01-15", "kind": "BOGUS", "amount": 1}
     assert client.post("/api/transactions", json=body).status_code == 422

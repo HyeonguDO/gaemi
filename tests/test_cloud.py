@@ -155,8 +155,8 @@ def test_ops_applied_through_the_app_and_state_pushed(ledger, monkeypatch):
     items = w.state["items"]
     n = len(ledger_months())
     assert n > 30 and months(items) == ledger_months()  # one key per month, never the old single "transactions"
-    assert set(items) - months(items) == {"summary", "accounts", "holdings", "snapshots", "formats"}
-    assert report["pushed"] == ["accounts", "formats", "holdings", "snapshots", "summary", f"transactions-* ({n})"]
+    assert set(items) - months(items) == {"summary", "accounts", "holdings", "snapshots", "formats", "fire"}
+    assert report["pushed"] == ["accounts", "fire", "formats", "holdings", "snapshots", "summary", f"transactions-* ({n})"]
     assert report["left_out"] == {}
     assert w.state["pushed_at"].endswith("+09:00")
     assert "toss:new" in {a["id"] for a in items["accounts"]}  # pushed after the ops were applied
@@ -288,7 +288,7 @@ def test_unchanged_keys_skipped_but_summary_always_pushed(ledger, monkeypatch):
     report = run(monkeypatch, w)
     assert report["pushed"] == ["summary"] and set(w.state["items"]) == {"summary"}  # its time is the phone's clock
     n = len(ledger_months())  # counted, not listed
-    assert report["unchanged"] == ["accounts", "formats", "snapshots", f"transactions-* ({n})"]  # holdings: too soon
+    assert report["unchanged"] == ["accounts", "fire", "formats", "snapshots", f"transactions-* ({n})"]  # holdings: too soon
 
     w = Worker([op(1, "POST", "/api/snapshots", {"account_id": "kb:demo-01", "date": "2026-09-24", "value": 7})])
     report = run(monkeypatch, w)

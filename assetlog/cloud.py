@@ -53,11 +53,11 @@ from . import config
 TIMEOUT = (10, 60)  # s: connect, read (an answer can carry ~2 MB of uploads)
 MAX_ITEM = 1_900_000  # bytes of JSON the Worker takes per state item (a D1 row tops out near 2 MB)
 HOLDINGS_PERIOD = 3600  # s between holdings pushes, absent a reason to push it sooner
-WRITES = re.compile(r"POST /api/(transactions|snapshots|accounts|import|sync|inbox/part|gold)|(PATCH|DELETE) /api/transactions/\d+"
+WRITES = re.compile(r"POST /api/(transactions|snapshots|accounts|import|sync|inbox/part|gold|fire)|(PATCH|DELETE) /api/transactions/\d+"
                     r"|DELETE /api/snapshots|DELETE /api/accounts/[\w.:@%-]+")  # the writes web.py has, as the Worker queues them
 READS = {"summary": "/api/summary", "accounts": "/api/accounts", "holdings": "/api/holdings",
          "transactions": "/api/transactions?limit=100000", "snapshots": "/api/snapshots?limit=5000",
-         "formats": "/api/import/formats"}  # each its own state key, but transactions: one per month (MONTH)
+         "formats": "/api/import/formats", "fire": "/api/fire"}  # each its own state key, but transactions: one per month (MONTH)
 MONTH = "transactions-"  # + YYYY-MM: the key of a month of transactions
 INTERRUPTED = {"status": "error", "result": "PC가 이 요청을 반영하다 멈췄어요. 반영됐는지 확인하고 필요하면 다시 입력해 주세요"}
 

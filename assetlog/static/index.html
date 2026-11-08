@@ -192,6 +192,46 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .list li:last-child { border-bottom: 0; }
 .list .meta { color: var(--muted); font-size: 12.5px; }
 
+/* FIRE */
+.fire-big { margin-top: 6px; font-size: 34px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+.fire-goal { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--sub); }
+.fire-pill { flex: none; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.fire-pill.ok { background: var(--mint-bg); color: var(--mint); } .fire-pill.no { background: var(--up-soft); color: var(--up); }
+.fire-bar { height: 8px; margin-top: 10px; border-radius: 999px; background: var(--field); overflow: hidden; }
+.fire-bar i { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+.fire-opt { padding: 12px 0; border-bottom: 1px solid var(--line); } .fire-opt:last-child { border-bottom: 0; }
+.fire-opt b { display: block; font-size: 15px; } .fire-opt .meta { display: block; margin-top: 4px; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+.fire-sub { margin-top: 22px; }
+.chip [data-cap] { margin-left: 5px; }
+.fire-slide { margin-top: 14px; }
+.fire-slide-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; }
+.fire-slide-head span { color: var(--sub); font-size: 13px; text-align: right; }
+input.fire-range { -webkit-appearance: none; appearance: none; height: 30px; margin-top: 4px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+input.fire-range::-webkit-slider-runnable-track { height: 16px; border-radius: 8px; background: linear-gradient(to right, var(--c) var(--v), var(--field) var(--v)); }
+input.fire-range::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -5px; border-radius: 50%; background: #fff; border: 2px solid var(--c); box-shadow: 0 1px 4px rgba(0, 0, 0, .18); }
+input.fire-range::-moz-range-track { height: 16px; border-radius: 8px; background: var(--field); }
+input.fire-range::-moz-range-progress { height: 16px; border-radius: 8px; background: var(--c); }
+input.fire-range::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 2px solid var(--c); }
+input.fire-range:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+details.fire-item { margin-top: 10px; padding: 0 12px; border: 1px solid var(--line); border-radius: 14px; font-size: 14px; color: var(--text); }
+details.fire-item[open] { padding-bottom: 12px; }
+details.fire-item > summary, details.fire-fold > summary { display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 12px 0; list-style: none; cursor: pointer; }
+details.fire-item > summary::-webkit-details-marker, details.fire-fold > summary::-webkit-details-marker { display: none; }
+details.fire-item > summary::after, details.fire-fold > summary::after { content: '›'; flex: none; color: var(--muted); font-size: 18px; transform: rotate(90deg); }
+details.fire-item[open] > summary::after, details.fire-fold[open] > summary::after { transform: rotate(-90deg); }
+details.fire-item > summary .meta { flex: 1; text-align: right; color: var(--muted); font-size: 12.5px; }
+details.fire-fold { margin-top: 14px; color: var(--text); font-size: 14px; }
+details.fire-fold > summary { font-size: 15px; font-weight: 700; padding: 0; }
+.fire-del { display: flex; justify-content: flex-end; margin-top: 10px; }
+.fire-tbl { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12.5px; }
+.fire-tbl th { padding: 6px 2px; color: var(--muted); font-weight: 600; text-align: right; white-space: nowrap; }
+.fire-tbl td { padding: 8px 2px; border-top: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.fire-tbl th:first-child, .fire-tbl td:first-child { text-align: left; }
+.fire-tbl td.name { white-space: normal; }
+.fire-notes { margin-top: 10px; padding-left: 18px; font-size: 12.5px; color: var(--sub); line-height: 1.6; }
+.fire-notes li + li { margin-top: 6px; }
+
 /* tabbar / toast / banners */
 .tabbar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; display: flex;
   background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(12px); border-top: 1px solid var(--line);
@@ -360,12 +400,20 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
       <button type="button" class="btn" id="logout-btn">로그아웃</button>
     </div>
   </section>
+
+  <section id="tab-fire" class="tab" hidden>
+    <div class="topbar"><h1 style="margin:0">FIRE</h1></div>
+    <p class="hint" style="margin:8px 2px 0">목표 나이에 원하는 생활비로 은퇴하려면 얼마나, 어떤 종목을 사야 하는지 계산해요. 투자 권유가 아닌 가정에 따른 계산이에요.</p>
+    <div id="fire-out"></div>
+    <form class="card" id="f-fire"></form>
+  </section>
 </main>
 
 <nav class="tabbar">
   <button data-go="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>홈</button>
   <button data-go="holdings"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>보유</button>
   <button data-go="review"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>검토<span class="count" id="count" hidden></span></button>
+  <button data-go="fire"><svg viewBox="0 0 24 24"><path d="M12 3c.6 3.2 4.5 5.2 4.5 9.6A4.5 4.5 0 0 1 12 17.1a4.5 4.5 0 0 1-4.5-4.5c0-2.1 1-3.4 2.2-4.3.1 1.6.9 2.7 2.1 2.9-.6-2.6-.4-5.5.2-8.2z"/><path d="M6 21h12"/></svg>FIRE</button>
   <button data-go="input"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>입력</button>
 </nav>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -1071,9 +1119,541 @@ $('#logout-btn').onclick = async () => {  // cloud mode only
   location.replace('/cdn-cgi/access/logout');  // ends the Cloudflare Access session
 };
 
+// fire:begin  The FIRE tab's simulation: pure functions, no DOM (tests/test_fire.py runs this block in node).
+// Won throughout, nominal unless named real. Contributions run monthly until fire_age; retirement runs yearly to end_age.
+const FIRE_DEFAULT = { goal: 'dividend', keep: false, age: null, fire_age: 50, end_age: 90, monthly: 5_000_000, inflation: 0.025, fx_drift: 0,
+  contrib_growth: 0, other_ret: 0.05, nhis_rate: 0.0719, ltc_rate: 0.009448, nhis_property: 0, pension_tax: 0.055,
+  pension_age: 55, items: [{ name: 'S&P 500 ETF', match: 'VOO', kind: 'us', unit: 'krw_day', amount: 10000, ret: 0.08, div: null }] };
+const FIRE_UNITS = { krw_day: '원/매일', usd_bday: '달러/영업일', shares_week: '주/매주', krw_month: '원/매월', none: '더 사지 않음' };
+const FIRE_GOALS = { dividend: '배당만으로 생활 (원금 유지)', drawdown: '자산을 나눠 쓰기' };
+const FIRE_KEEP = { false: '은퇴 첫해에 목표 이상', true: '계산 끝 나이까지 매년 목표 이상' };
+const FIRE_KINDS = { us: '미국 상장', gold: '금현물', pension: '퇴직연금 (DC·IRP)' };
+// Korean rules as of 2026. Thresholds and brackets stay fixed in won: they are not indexed to inflation.
+const KR = {
+  brackets: [[14e6, 0.06], [50e6, 0.15], [88e6, 0.24], [150e6, 0.35], [300e6, 0.38], [500e6, 0.40], [1e9, 0.42], [Infinity, 0.45]],
+  fin: 20e6,         // 금융소득종합과세: dividends above this go into the progressive brackets
+  deduction: 1.5e6,  // 기본공제, the person alone
+  usTax: 0.15,       // US withholding on dividends (treaty rate)
+  cgtFree: 2.5e6,    // 해외주식 양도소득 기본공제, a year
+  nhisFin: 10e6,     // 지역가입자: 금융소득 above this counts in full toward the income part of the premium
+};
+const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+
+// The saved plan is untrusted (any JSON the server kept): every field becomes a number in range or its default.
+function fireNorm(raw) {
+  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}, D = FIRE_DEFAULT;
+  const n = (x, lo, hi, d) => { x = x === '' || x == null ? NaN : Number(x); return isFinite(x) ? Math.min(hi, Math.max(lo, x)) : d; };
+  return {
+    goal: own(FIRE_GOALS, r.goal) ? r.goal : D.goal, keep: r.keep === true || r.keep === 'true', age: n(r.age, 15, 99, null), fire_age: n(r.fire_age, 16, 100, D.fire_age), end_age: n(r.end_age, 17, 110, D.end_age),
+    monthly: n(r.monthly, 0, 1e9, D.monthly), inflation: n(r.inflation, -0.05, 0.2, D.inflation),
+    fx_drift: n(r.fx_drift, -0.2, 0.2, D.fx_drift), contrib_growth: n(r.contrib_growth, -0.2, 0.3, D.contrib_growth),
+    other_ret: n(r.other_ret, -0.5, 1, D.other_ret), nhis_rate: n(r.nhis_rate, 0, 0.2, D.nhis_rate),
+    ltc_rate: n(r.ltc_rate, 0, 0.05, D.ltc_rate), nhis_property: n(r.nhis_property, 0, 1e8, D.nhis_property),
+    pension_tax: n(r.pension_tax, 0, 0.5, D.pension_tax), pension_age: 'pension_age' in r ? n(r.pension_age, 40, 100, null) : D.pension_age,  // null: no pension
+    items: (Array.isArray(r.items) ? r.items : D.items).slice(0, 20).map(it => ({
+      name: String(it?.name ?? '').slice(0, 30), match: String(it?.match ?? '').trim().slice(0, 64),
+      kind: own(FIRE_KINDS, it?.kind) ? it.kind : 'us', unit: own(FIRE_UNITS, it?.unit) ? it.unit : 'krw_month',
+      amount: n(it?.amount, 0, 1e9, 0), ret: n(it?.ret, -0.5, 1, null), div: n(it?.div, 0, 0.5, null),
+      weight: n(it?.weight, 0, 100, null),
+      price: n(it?.price, 0, 1e7, null) })),
+  };
+}
+
+// Where the plan starts, from GET /api/holdings: each item's value is its symbol's positions (or a whole account,
+// when match is an account id), with their cost basis and dividend yield; what no item matches is "그 밖의 보유 자산".
+function fireStart(p, h, fx) {
+  const accts = h?.accounts || [], all = accts.flatMap(a => a.positions || []);
+  const sym = x => String(x.symbol || '').toUpperCase();
+  const cost = x => x.cost_krw ?? (x.pnl_krw != null ? x.value_krw - x.pnl_krw : x.value_krw) ?? 0;
+  const add = (xs, f) => xs.reduce((t, x) => t + (f(x) || 0), 0);
+  const usedAcc = new Set(), usedSym = new Set();
+  const items = p.items.map(it => {
+    const acc = accts.find(a => a.id === it.match);
+    if (acc) { usedAcc.add(acc.id); return { value: acc.total_krw || 0, basis: acc.total_krw || 0, price: null, cur: null, div: null, acc: true }; }
+    const s = it.match.toUpperCase(), ps = s ? all.filter(x => sym(x) === s) : [];
+    if (s) usedSym.add(s);
+    const value = add(ps, x => x.value_krw);
+    return { value, basis: add(ps, cost), price: ps[0]?.price ?? null, cur: ps[0]?.currency ?? null,
+             div: value ? add(ps, x => x.annual_div_krw) / value : null, held: ps.length > 0 };
+  });
+  const rest = accts.filter(a => !usedAcc.has(a.id)), ps = rest.flatMap(a => a.positions || []);
+  const mine = ps.filter(x => usedSym.has(sym(x))), other = ps.filter(x => !usedSym.has(sym(x)));
+  const value = Math.max(0, add(rest, a => a.total_krw) - add(mine, x => x.value_krw));  // cash included
+  return { fx, items, other: { value, basis: Math.max(0, value - add(other, x => x.value_krw - cost(x))),
+                              div: value ? add(other, x => x.annual_div_krw) / value : 0 } };
+}
+
+// The items with their start values; dividends only for US-listed ones (a pension reinvests inside, gold pays none).
+// A blank total return means the price holds: the return is the payout alone.
+function fireAssets(p, s) {
+  const A = p.items.map((it, i) => {
+    const st = s.items[i] || {}, div = it.kind === 'us' ? it.div ?? st.div ?? 0 : 0;
+    return { ...it, v: st.value || 0, b: st.basis || 0, price: st.price ?? it.price ?? 0,
+             cur: st.cur || (it.kind === 'us' ? 'USD' : 'KRW'),  // the share price's currency
+             div, ret: (it.ret ?? div) + (p.shift || 0) };  // shift: a scenario's change to every total return
+  });
+  A.push({ name: '그 밖의 보유 자산', match: '', kind: 'us', unit: 'krw_month', amount: 0, ret: p.other_ret + (p.shift || 0),
+           div: s.other.div || 0, v: s.other.value || 0, b: s.other.basis || 0, price: 0 });
+  return A;
+}
+
+// Won a month that one item's plan buys, t years from now.
+function fireContrib(a, p, fx, t) {
+  const x = a.amount, rate = fx * (1 + p.fx_drift) ** t;
+  if (a.unit === 'none') return 0;  // held, no longer bought
+  if (a.unit === 'krw_day') return x * 365 / 12;
+  if (a.unit === 'usd_bday') return x * 250 / 12 * rate;  // ~250 US trading days a year
+  if (a.unit === 'shares_week')  // the price moves with the asset; a KRX listing is priced in won already
+    return x * 52 / 12 * a.price * (1 + a.ret - a.div) ** t * (a.cur === 'USD' ? rate : 1);
+  return x;
+}
+
+function fireProgressive(x) {
+  let t = 0, lo = 0;
+  for (const [hi, r] of KR.brackets) { if (x > lo) t += (Math.min(x, hi) - lo) * r; lo = hi; }
+  return t;
+}
+// A year's gross US dividends d. The US keeps 15%. Korea taxes them 14% flat up to 2,000만 and in the progressive
+// brackets above it (비교과세: whichever is more), credits the US tax, and adds 10% local tax on what is left to pay.
+function fireDivTax(d) {
+  const flat = d * 0.14;
+  const kr = d > KR.fin ? Math.max(flat, KR.fin * 0.14 + fireProgressive(d - KR.fin - KR.deduction)) : flat;
+  return { us: d * KR.usTax, kr: Math.max(0, kr - d * KR.usTax) * 1.1 };
+}
+// 해외주식 양도소득세 on a year's realized gain: 22% (local tax included) after 250만, 27.5% above a 3억 base.
+function fireCgt(gain) {
+  const x = Math.max(0, gain - KR.cgtFree);
+  return Math.min(x, 3e8) * 0.22 + Math.max(0, x - 3e8) * 0.275;
+}
+
+// How a monthly amount added to the plan is split across the items (the shares sum to 1). Only items that serve the
+// goal take a share: under the dividend goal, the US-listed ones (gold and the pension pay none). Entered weights
+// win, and blanks then get none; with none entered the split follows what the plan buys today (even if nothing).
+function fireWeights(p, s) {
+  const A = fireAssets(p, s), on = i => p.items[i].unit !== 'none' && (p.goal !== 'dividend' || p.items[i].kind === 'us');
+  const set = p.items.some((it, i) => on(i) && it.weight != null);
+  let w = p.items.map((it, i) => !on(i) ? 0 : set ? it.weight ?? 0 : fireContrib(A[i], p, s.fx, 0));
+  if (!w.some(x => x > 0)) w = p.items.map((it, i) => on(i) ? 1 : 0);
+  const sum = w.reduce((t, x) => t + x, 0);
+  return w.map(x => sum ? x / sum : 0);
+}
+
+// What a year's gross dividends d leave to live on as a 지역가입자: after the dividend taxes and the health
+// insurance (its income part counts all 금융소득 once it passes 1,000만; f inflates the property part).
+function fireNet(p, d, f) {
+  const tax = fireDivTax(d);
+  return d - tax.us - tax.kr - (d > KR.nhisFin ? d * (p.nhis_rate + p.ltc_rate) : 0) - p.nhis_property * 12 * f;
+}
+
+// One path: today's plan plus x won a month (split by fireWeights) until fireAge, then each year to end_age the target (monthly, today's won).
+// goal 'dividend': live on the dividends, selling nothing (plus the pension from pension_age); ok when the first year
+//   reaches the target (keep: every year to end_age does), and short is the first age the income falls below it.
+// A null pension_age leaves the pension out: it is never drawn.
+// goal 'drawdown': sell assets pro rata for what the dividends don't cover (the pension from pension_age, evenly to
+//   end_age); ok is false when the money runs out, and out is that age.
+function fireRun(p, s, x, o = {}) {
+  const monthly = o.monthly ?? p.monthly, fireAge = o.fireAge ?? p.fire_age, A = fireAssets(p, s), W = fireWeights(p, s);
+  const penAge = p.pension_age ?? Infinity;
+  const grow = a => a.kind === 'us' ? (1 + a.ret - a.div) * (1 + p.fx_drift) : 1 + a.ret;  // a year's price move, in won
+  const total = () => A.reduce((t, a) => t + a.v, 0), divs = () => A.reduce((t, a) => t + a.v * a.div, 0);
+  const defl = T => (1 + p.inflation) ** T, point = (age, T) => ({ age, T, value: total(), real: total() / defl(T), div: divs(),
+                                                       vals: A.map(a => a.v) });  // each item's value, other assets last
+  const n = Math.max(0, Math.round((fireAge - p.age) * 12)), path = [point(p.age, 0)];
+  let divYear = 0, divWarn = null;
+  for (let m = 0; m < n; m++) {
+    const t = m / 12;
+    let spare = 0;  // dividends of items no longer bought: they buy the plan's items instead (split like x)
+    A.forEach((a, i) => {
+      const d = a.v * a.div / 12, kept = d * (1 - KR.usTax);  // reinvested after the US withholding
+      a.v *= grow(a) ** (1 / 12); divYear += d;
+      if (a.unit === 'none') spare += kept; else { a.v += kept; a.b += kept; }
+      const c = (fireContrib(a, p, s.fx, t) + x * (W[i] || 0)) * (1 + p.contrib_growth) ** t;
+      a.v += c; a.b += c;
+    });
+    A.forEach((a, i) => { const c = W.some(w => w > 0) ? spare * (W[i] || 0) : i === A.length - 1 ? spare : 0; a.v += c; a.b += c; });
+    if ((m + 1) % 12 === 0 || m === n - 1) {
+      if (divYear > KR.fin && divWarn == null) divWarn = p.age + t;
+      divYear = 0;
+      path.push(point(p.age + (m + 1) / 12, (m + 1) / 12));
+    }
+  }
+  const T0 = n / 12, atFire = total();
+  const res = { ok: true, out: null, short: null, atFire, atFireReal: atFire / defl(T0), path, rows: [], divWarn,
+                divAt: A.map(a => a.v * a.div) };  // each item's dividends a year at fireAge (the last: other assets)
+  const pen = A.filter(a => a.kind === 'pension'), liquid = A.filter(a => a.kind !== 'pension');
+  const sumv = xs => xs.reduce((t, a) => t + a.v, 0);
+  const buys = liquid.filter(a => a.unit !== 'none');
+  const reinvest = cash => {  // a surplus goes back in pro rata, never into what is no longer bought
+    const pool = sumv(buys), to = pool > 0 ? buys : [A[A.length - 1]];
+    for (const a of to) { const x = pool > 0 ? cash * a.v / pool : cash; a.v += x; a.b += x; }
+  };
+  for (let age = fireAge; age < p.end_age; age++) {
+    const f = defl(T0 + age - fireAge), start = total();
+    const div = divs(), tax = fireDivTax(div), net = fireNet(p, div, f);
+    const nhis = div - tax.us - tax.kr - net, spend = monthly * 12 * f;
+    let pension = 0, sold = 0, cgt = 0;
+    if (age >= penAge) for (const a of pen) { const w = a.v / Math.max(1, p.end_age - age); a.v -= w; pension += w; }  // evenly to end_age
+    const cash = net + pension * (1 - p.pension_tax) - spend;
+    if (p.goal === 'dividend') {
+      if (cash > 0) reinvest(cash);
+      else if (cash < -1 && res.short == null) res.short = age;
+    } else {
+      if (cash < 0) {  // sell the liquid assets pro rata, just enough to cover the gap after 양도세
+        const pool = sumv(liquid);
+        const gain = G => pool > 0 ? liquid.reduce((t, a) => t + (a.kind === 'us' && a.v > 0 ? G * a.v / pool * Math.max(0, 1 - a.b / a.v) : 0), 0) : 0;
+        const after = G => G - fireCgt(gain(G));
+        let need = -cash;
+        if (after(pool) >= need) {
+          let lo = 0, hi = pool;
+          for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (after(mid) < need) lo = mid; else hi = mid; }
+          sold = hi;
+        } else sold = pool;
+        cgt = fireCgt(gain(sold));
+        need -= sold - cgt;
+        for (const a of liquid) { const x = pool > 0 ? sold * a.v / pool : 0; if (a.v > 0) a.b *= 1 - x / a.v; a.v -= x; }
+        if (need > 1e-6) {  // nothing liquid left: the pension covers the rest once it can be drawn
+          const pv = sumv(pen);
+          if (age < penAge || pv * (1 - p.pension_tax) < need) {
+            res.rows.push({ age, start, real: 1 / f, spend, div, net, tax: tax.us + tax.kr + cgt + pension * p.pension_tax, nhis, pension, sold });
+            return { ...res, ok: false, out: age };
+          }
+          const w = need / (1 - p.pension_tax);
+          for (const a of pen) a.v -= w * a.v / pv;
+          pension += w;
+        }
+      } else if (cash > 0) reinvest(cash);
+    }
+    res.rows.push({ age, start, real: 1 / f, spend, div, net, tax: tax.us + tax.kr + cgt + pension * p.pension_tax, nhis, pension, sold });
+    for (const a of A) a.v *= grow(a);
+    res.path.push(point(age + 1, T0 + age + 1 - fireAge));
+  }
+  if (p.goal === 'dividend') res.ok = p.keep ? res.short == null : res.short !== fireAge;
+  return res;
+}
+
+// The headline, cheap enough to redo while a slider moves. Dividend goal: the monthly income (today's won) of the first
+// year, or with keep of the leanest year, spending the target and reinvesting the rest: one run. Drawdown: the most
+// today's plan can spend (fireCapacity).
+function fireHeadline(p, s) {
+  if (p.goal !== 'dividend') return { value: fireCapacity(p, s), low: null };
+  const run = fireRun(p, s, 0), inc = y => (y.net + y.pension * (1 - p.pension_tax)) / 12 * y.real;
+  const low = (p.keep ? run.rows : run.rows.slice(0, 1)).reduce((m, y) => !m || inc(y) < inc(m) ? y : m, null);
+  return { value: low ? Math.max(0, inc(low)) : 0, low };
+}
+
+// What today's plan supports, monthly in today's won: the most it can spend (dividend goal: the first year's net
+// dividends; keep: what it pays every year).
+function fireCapacity(p, s, now = fireRun(p, s, 0)) {
+  if (p.goal === 'dividend' && !p.keep) return now.rows[0] ? Math.max(0, now.rows[0].net / 12 * now.rows[0].real) : 0;
+  const ok = m => fireRun(p, s, 0, { monthly: m }).ok;
+  let lo = 0, hi = 1e6;
+  while (hi < 1e10 && ok(hi)) hi *= 2;
+  for (let i = 0; i < 30; i++) { const m = (lo + hi) / 2; if (ok(m)) lo = m; else hi = m; }
+  return lo;
+}
+
+// x: won a month to add to today's plan, split by fireWeights (0: today's plan is enough; null: not even ~1억 more a
+// month reaches it). maxMonthly: what today's plan supports, monthly in today's won (dividend goal: the first year's
+// net dividends; keep: what it holds every year); age: the first FIRE age today's plan reaches the target at.
+function fireSolve(p, s) {
+  const ok = (x, o) => fireRun(p, s, x, o).ok, now = fireRun(p, s, 0);
+  let x = 0;
+  if (!now.ok) {
+    let hi = 1e5;
+    while (hi < 1e8 && !ok(hi)) hi *= 2;
+    if (!ok(hi)) x = null;
+    else {
+      let lo = hi > 1e5 ? hi / 2 : 0;
+      for (let i = 0; i < 30; i++) { const m = (lo + hi) / 2; if (ok(m)) hi = m; else lo = m; }
+      x = hi;
+    }
+  }
+  const lo = fireCapacity(p, s, now);
+  let age = null;
+  for (let a = Math.floor(p.age) + 1; a < Math.min(p.end_age, 81); a++) if (ok(0, { fireAge: a })) { age = a; break; }
+  const A = fireAssets(p, s), perMonth = A.slice(0, -1).map(a => fireContrib(a, p, s.fx, 0));
+  return { x, w: fireWeights(p, s), maxMonthly: lo, age, perMonth, now, need: x == null ? null : x === 0 ? now : fireRun(p, s, x) };
+}
+// fire:end
+
+// FIRE tab: the plan comes from GET /api/fire (data/fire.json, null until saved), start values from the holdings.
+// Results lead with one number (what today's plan pays, against the target) and three scenarios to compare; the plan
+// form below folds each item away.
+const FIRE_SCEN = [[0, '기본', '입력한 가정 그대로예요.'],
+  [-0.02, '보수적', '모든 종목의 기대 총수익률을 2%p 낮춘 경우예요. 배당률은 그대로라, 그만큼 가격이 덜 오르거나 더 떨어져요.'],
+  [-0.04, '최악', '모든 종목의 기대 총수익률을 4%p 낮춘 경우예요. 배당률은 그대로라, 그만큼 가격이 덜 오르거나 더 떨어져요.']];
+const FIRE_FIELDS = {  // key: [label, shown as %]
+  age: ['현재 나이'], fire_age: ['FIRE 나이'], monthly: ['목표 세후 월 금액 (현재 가치)'], end_age: ['계산 끝 나이'],
+  pension_age: ['퇴직연금 받는 나이 (비우면 안 받음)'],
+  more: [['inflation', '물가상승률 (연 %)', 1], ['fx_drift', '원/달러 환율 변화 (연 %)', 1], ['contrib_growth', '적립액 증가율 (연 %)', 1],
+    ['other_ret', '그 밖의 보유 자산 기대수익률 (연 %)', 1], ['nhis_rate', '건강보험료율 (%)', 1], ['ltc_rate', '장기요양보험료율 (소득 대비 %)', 1],
+    ['nhis_property', '재산분 건보료 (월, 현재 가치)'], ['pension_tax', '퇴직연금 인출 세율 (%)', 1]],
+};
+const FIRE_AMT = { krw_day: '금액 (원)', krw_month: '금액 (원)', usd_bday: '금액 (달러, $)', shares_week: '수량 (주)', none: '금액 (쓰지 않음)' };
+const fireVal = (v, isPct) => v == null ? '' : isPct ? String(+(v * 100).toFixed(4)) : String(v);
+const fireInput = ([k, label, isPct]) => `<label>${label}<input data-k="${k}"${isPct ? ' data-pct="1"' : ''} inputmode="decimal" autocomplete="off" value="${fireVal(state.fire.plan[k], isPct)}"></label>`;
+const fireField = k => fireInput([k, ...FIRE_FIELDS[k]]);
+const fireOpts = (o, cur) => Object.entries(o).map(([v, t]) => `<option value="${v}"${v === cur ? ' selected' : ''}>${t}</option>`).join('');
+
+function renderFireForm() {
+  const p = state.fire.plan, h = state.holdings;
+  const matches = [...new Set((h?.accounts || []).flatMap(a => (a.positions || []).map(x => x.symbol)))]
+    .map(s => `<option value="${esc(s)}">`).concat((h?.accounts || []).map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`));
+  $('#f-fire').innerHTML = `<h2>내 계획</h2>
+    <div class="row2">${fireField('age')}${fireField('fire_age')}</div>
+    <div class="row2">${fireField('monthly')}${fireField('end_age')}</div>
+    <div class="row2"><label>목표 방식<select data-k="goal">${fireOpts(FIRE_GOALS, p.goal)}</select></label>
+      <label>배당 목표 기준<select data-k="keep">${fireOpts(FIRE_KEEP, String(p.keep))}</select></label></div>
+    ${fireField('pension_age')}
+    <p class="hint">퇴직연금은 회사 DC 퇴직연금(퇴사 뒤엔 IRP)이에요. 국민연금은 계산에 넣지 않아요. 연금 없이 버티는지 보려면 퇴직연금 나이를 비워 두세요.</p>
+    <h2 class="fire-sub">매수 계획</h2>
+    <p class="hint">종목을 눌러 금액과 가정을 바꿔요. 기대 총수익률(배당 포함)을 비우면 가격이 그대로라고 보고, 배당률을 비우면 지금 배당률을 써요.</p>
+    <datalist id="fire-matches">${matches.join('')}</datalist>
+    ${p.items.map((it, i) => `<details class="fire-item" data-i="${i}"><summary data-sum="${i}"><b>${esc(it.name || it.match || '새 종목')}</b></summary>
+      <p class="hint" data-hint="${i}"></p>
+      <div class="row2"><label>이름<input name="name" maxlength="30" value="${esc(it.name)}"></label>
+        <label>연결 (종목 코드·계좌)<input name="match" list="fire-matches" maxlength="64" autocomplete="off" value="${esc(it.match)}"></label></div>
+      <div class="row2"><label>종류<select name="kind">${fireOpts(FIRE_KINDS, it.kind)}</select></label>
+        <label>사는 방식<select name="unit">${fireOpts(FIRE_UNITS, it.unit)}</select></label></div>
+      <div class="row2"><label><span data-amt>${FIRE_AMT[it.unit]}</span><input name="amount" inputmode="decimal" value="${fireVal(it.amount)}"></label>
+        <label>기대 총수익률 (연 %)<input name="ret" inputmode="decimal" placeholder="가격 유지" value="${fireVal(it.ret, 1)}"></label></div>
+      <div class="row2"><label>배당률 (연 %)<input name="div" inputmode="decimal" placeholder="지금 배당률" value="${fireVal(it.div, 1)}"></label>
+        <label>늘릴 때 비중 (%)<input name="weight" inputmode="decimal" placeholder="지금 비율" value="${fireVal(it.weight, 1)}"></label></div>
+      <div class="fire-del"><button type="button" class="sbtn danger" data-fire-del="${i}">이 종목 빼기</button></div>
+    </details>`).join('')}
+    <button type="button" class="sbtn" id="fire-add" style="margin-top:12px">종목 추가</button>
+    <p class="hint">늘릴 때 비중: 목표에 모자라 더 넣어야 하는 금액을 나누는 비율이에요. 모두 비우면 지금 매수 비율대로, 하나라도 넣으면 넣은 종목끼리 나눠요. 배당 목표에서는 금현물·퇴직연금은 늘리지 않아요.</p>
+    <details class="fire-fold"><summary>세금·물가 가정</summary>${FIRE_FIELDS.more.map(fireInput).join('')}</details>
+    <button class="btn">저장</button>`;
+}
+
+function readFire() {
+  const f = $('#f-fire'), raw = {}, clean = v => v.replace(/[,\s원%$]/g, '');
+  f.querySelectorAll('[data-k]').forEach(el => {
+    const v = clean(el.value);
+    raw[el.dataset.k] = el.tagName === 'SELECT' ? el.value : v === '' ? null : el.dataset.pct ? Number(v) / 100 : Number(v);
+  });
+  raw.items = [...f.querySelectorAll('.fire-item')].map(box => {
+    const g = n => box.querySelector(`[name=${n}]`).value, pv = n => clean(g(n)) === '' ? null : Number(clean(g(n))) / 100;
+    return { name: g('name'), match: g('match'), kind: g('kind'), unit: g('unit'), amount: clean(g('amount')), ret: pv('ret'), div: pv('div'),
+             weight: pv('weight') };
+  });
+  return fireNorm(raw);
+}
+
+// "매일 4만 7,000원", "영업일마다 $12.5", "매주 3.4주"
+function fireAmount(unit, x) {
+  if (unit === 'none') return '더 사지 않음';
+  if (unit === 'krw_day') return '매일 ' + won(Math.round(x / 100) * 100);
+  if (unit === 'krw_month') return '매월 ' + won(Math.round(x / 1000) * 1000);
+  const r = (Math.round(x * 10) / 10).toLocaleString('en-US');
+  return mask(unit === 'usd_bday' ? `영업일마다 $${r}` : `매주 ${r}주`);
+}
+
+function renderFire() {
+  const out = $('#fire-out'), p = state.fire?.plan;
+  if (!p) return;
+  const fx = state.summary?.fx?.USD?.krw, note = s => `<div class="card"><p class="hint">${s}</p></div>`;
+  if (p.age == null) { out.innerHTML = note('아래 내 계획에 현재 나이를 넣으면 계산해요.'); return; }
+  if (!(p.age < p.fire_age && p.fire_age < p.end_age)) { out.innerHTML = note('나이는 현재 나이 < FIRE 나이 < 계산 끝 나이 순서여야 해요.'); return; }
+  if (!fx) { out.innerHTML = note('환율을 아직 못 불러왔어요. 증권사 동기화 뒤에 다시 열어 주세요.'); return; }
+  const shift = state.fire.shift || 0, q = { ...p, shift }, s = fireStart(p, state.holdings, fx), base = fireAssets(p, s);
+  base.slice(0, -1).forEach((a, i) => {  // each folded item: its plan in one line, and where it starts from
+    const st = s.items[i], sum = $(`#f-fire [data-sum="${i}"]`), hint = $(`#f-fire [data-hint="${i}"]`);
+    if (sum) sum.innerHTML = `<b>${esc(a.name || a.match || '새 종목')}</b><span class="meta">${fireAmount(a.unit, a.amount)} · 수익 ${pct(a.ret, false)}${a.kind === 'us' ? ` · 배당 ${pct(a.div, false)}` : ''}</span>`;
+    if (hint) hint.textContent = (st.acc ? `계좌 평가액 ${won(st.value)}에서 시작 · 원화 자산`
+      : st.held ? `보유 평가액 ${won(st.value)}에서 시작 · 1주 ${native(st.price, st.cur)} (${st.cur === 'USD' ? '달러' : '원화'})`
+      : '연결된 보유 종목·계좌가 없어 0원에서 시작' + (a.kind === 'us' && p.items[i].div == null ? ' · 배당률을 직접 넣어야 배당이 계산돼요' : ''))
+      + (a.kind === 'us' ? ` · 가정상 가격 변화 연 ${pct(a.ret - a.div)}` : '');
+  });
+  const r = fireSolve(q, s), A = fireAssets(q, s), divGoal = p.goal === 'dividend', F = p.fire_age, x = r.x;
+  Object.assign(state.fire, { s, base, fx });  // for the sliders, which redo only the headline while they move
+  // the bars' shared scale only grows (when one nears its end), so a thumb never jumps under the finger
+  const sMax = state.fire.slideMax = Math.max(state.fire.slideMax || 0, 3e6, Math.ceil(Math.max(0, ...r.perMonth) * 1.2 / 1e6) * 1e6);
+  const caps = FIRE_SCEN.map(([d]) => fireHeadline({ ...p, shift: d }, s).value);
+  const cap = caps[FIRE_SCEN.findIndex(([d]) => d === shift)], met = cap >= p.monthly - 1, run = r.now;
+  const income = y => (y.net + y.pension * (1 - p.pension_tax)) / 12 * y.real;  // a row's monthly income, today's won
+  const low = run.rows.reduce((m, y) => !m || income(y) < income(m) ? y : m, null);
+  const what = !divGoal ? `${F}~${p.end_age}세에 쓸 수 있는 세후 월 생활비` : p.keep ? `${F}~${p.end_age}세 중 가장 적은 해의 세후 월 수입` : `${F}세 첫해 세후 월 수입`;
+  const nowMonth = r.perMonth.reduce((t, v) => t + v, 0), extra = i => x ? x * r.w[i] : 0;
+  const inUnit = (i, v) => {  // won a month in item i's own unit, at today's price and rate
+    const a = A[i], u = a.unit;
+    if (u === 'krw_day') return v * 12 / 365;
+    if (u === 'krw_month') return v;
+    if (u === 'usd_bday') return v / (fx * 250 / 12);
+    return a.price ? v / (a.price * (a.cur === 'USD' ? fx : 1) * 52 / 12) : null;
+  };
+  const weighted = p.items.some((it, i) => (!divGoal || it.kind === 'us') && it.weight != null);
+  const names = [...p.items.map(it => it.name || it.match || '이름 없음'), '계획 밖 보유'];
+  const at = a => run.path.find(y => Math.round(y.age) === a), realOf = (y, i) => y.vals[i] / (1 + p.inflation) ** y.T;
+  const cell = v => `<td>${view.hide ? '••' : short(v)}</td>`, notes = [];
+  if (!state.holdings) notes.push('보유 잔고를 못 불러와서 지금 자산을 0원으로 계산했어요.');
+  if (A.some(a => a.unit === 'shares_week' && a.amount > 0 && !a.price)) notes.push('주 단위 종목의 가격을 몰라 0원으로 계산했어요. 보유 중인 종목에 연결하거나 달러 단위로 바꾸세요.');
+  notes.push(divGoal ? '배당으로 생활: 원금은 팔지 않고, 쓰고 남은 돈은 다시 사요.' : '자산을 나눠 쓰기: 배당으로 모자란 만큼 해마다 자산을 팔아요(미국 ETF 매도차익은 연 250만원 공제 뒤 22%, 금현물은 비과세).');
+  notes.push(p.pension_age == null ? '퇴직연금은 받지 않는다고 봐요(계좌 안에서 불어나기만 해요). 국민연금도 넣지 않았어요.'
+    : `퇴직연금(DC·IRP)은 ${p.pension_age}세부터 ${p.end_age}세까지 나눠 받고, 인출액의 ${pct(p.pension_tax, false)}를 세금으로 봐요. 국민연금은 넣지 않았어요.`);
+  if (p.items.some(it => it.unit === 'none')) notes.push('더 사지 않는 종목은 지금 보유분만 두고, 일하는 동안 나오는 그 배당은 계획 종목을 사는 데 써요.');
+  if (s.other.value > 0) notes.push(`계획 밖 보유 ${won(s.other.value)}(예수금 포함)은 지금 배당률 ${pct(s.other.div, false)}, 기대 총수익률 ${pct(p.other_ret, false)}로 계산해요. 최근 12개월 분배금으로 잰 배당률이라, 분배금이 끊긴 종목이 있으면 매수 계획에 '더 사지 않음'으로 넣고 배당률을 직접 적으세요.`);
+  if (run.divWarn != null) notes.push(`${Math.floor(run.divWarn)}세쯤부터 연 배당이 2,000만원을 넘어요. 일하는 동안엔 근로소득과 합쳐 종합과세되고 직장 건보료(보수 외 소득)도 붙는데, 적립기 계산에는 미국 원천징수 15%만 넣었어요.`);
+  notes.push(`배당이 연 1,000만원을 넘으면 배당 전액에 건보료(약 ${pct(p.nhis_rate + p.ltc_rate, false)})가 붙고, 2,000만원을 넘으면 금융소득종합과세예요. 세율·건보료율은 2026년 기준으로 고정했어요.`);
+  notes.push(`목표는 현재 가치(물가 ${pct(p.inflation, false)} 반영)예요. ${F}세 명목 금액으로는 월 ${won(p.monthly * (1 + p.inflation) ** (F - p.age))}이에요.`);
+  notes.push('수익률·배당률·환율은 가정대로만 꾸준히 움직이고, 실제 시장처럼 오르내리지 않아요. 특히 TQQQ 같은 레버리지 상품은 실제와 크게 다를 수 있어요. 투자 권유가 아닌 계산기예요.');
+  const ages = [...new Set([F, F + 1, p.pension_age, 60, 70, 80, 90, p.end_age - 1, low?.age])].filter(a => a != null && a >= F && a < p.end_age).sort((a, b) => a - b);
+  const vAges = [...new Set([Math.round(p.age), F, 65, 80, p.end_age])].filter(a => a <= p.end_age).sort((a, b) => a - b);
+  const split = p.items.map((it, i) => extra(i) > 0 ? `${esc(names[i])} ${inUnit(i, extra(i)) == null ? `+월 ${won(extra(i))}` : `${fireAmount(it.unit, it.amount + inUnit(i, extra(i)))} (+월 ${won(extra(i))})`}` : '').filter(Boolean);
+  out.innerHTML = `<div class="card">
+      <div class="stat-label">${what} · 지금 계획</div>
+      <div class="fire-big num" id="fire-big">${won(cap)}</div>
+      <div class="fire-goal"><span>목표 월 ${won(p.monthly)}</span>${firePill(cap, p.monthly)}</div>
+      <div class="fire-bar"><i id="fire-bar" style="width:${Math.min(100, cap / p.monthly * 100)}%"></i></div>
+      <div class="chips">${FIRE_SCEN.map(([d, label], i) => `<button type="button" class="chip${d === shift ? ' on' : ''}" aria-pressed="${d === shift}" data-shift="${d}">${label} <span data-cap="${i}">${view.hide ? '' : short(caps[i])}</span></button>`).join('')}</div>
+      <p class="hint">${FIRE_SCEN.find(([d]) => d === shift)[2]} 금액은 모두 현재 가치예요.</p>
+    </div>
+    <div class="card"><div class="card-head"><h2>매달 사는 금액</h2><span class="tag-muted num" id="fire-total">월 ${won(nowMonth)}</span></div>
+      <p class="hint">막대를 끌면 위 금액이 바로 바뀌고, 손을 떼면 아래도 다시 계산해요. 바꾼 금액은 저장을 눌러야 남아요.</p>
+      ${p.items.map((it, i) => it.unit === 'none' || it.kind === 'pension' || (it.unit === 'shares_week' && !base[i].price) ? '' : fireSlider(it, i, r.perMonth[i], sMax)).join('')}
+    </div>
+    ${met ? `<div class="card"><h2>지금 계획으로 충분해요</h2><ul class="list">
+        <li><span>목표보다 여유</span><b class="num">월 ${won(cap - p.monthly)}</b></li>
+        ${divGoal && low ? `<li><span>가장 적은 해</span><b class="num">${low.age}세 월 ${won(income(low))}</b></li>` : ''}
+        ${r.age != null ? `<li><span>목표에 닿는 가장 이른 FIRE</span><b class="num">${r.age}세</b></li>` : ''}
+        <li><span>지금 월 적립</span><b class="num">${won(nowMonth)}</b></li></ul></div>`
+    : `<div class="card"><h2>목표에 닿는 방법 (하나만 하면 돼요)</h2>
+        <div class="fire-opt"><b>${x == null ? '적립을 늘려서는 어려워요' : `매달 ${won(x)} 더 넣기`}</b><span class="meta">${x == null ? '매달 1억원을 더 넣어도 닿지 않아요.' : `지금 월 ${won(nowMonth)} → ${won(nowMonth + x)}. ${weighted ? '입력한 비중' : '지금 매수 비율'}대로 나누면:<br>${split.join('<br>')}`}</span></div>
+        <div class="fire-opt"><b>${r.age != null ? `FIRE를 ${r.age}세로 늦추기` : 'FIRE를 늦추기'}</b><span class="meta">${r.age != null ? '지금 계획 그대로 두고 은퇴만 늦춰요.' : '80세 전에는 지금 계획으로 닿지 않아요.'}</span></div>
+        <div class="fire-opt"><b>목표를 월 ${won(cap)}로 낮추기</b><span class="meta">${F}세 FIRE와 지금 계획 그대로요.</span></div>
+      </div>`}
+    <div class="card"><h2>${divGoal ? '나이별 세후 월 수입' : '나이별 자산'} (현재 가치)</h2><div class="chart-box"><canvas id="c-fire" role="img" aria-label="${divGoal ? '나이별 세후 월 수입' : '나이별 예상 자산'}"></canvas></div></div>
+    <div class="card"><h2>자산은 이렇게 불어나요 (현재 가치)</h2><div class="chart-box"><canvas id="c-fire-assets" role="img" aria-label="종목별 예상 평가액"></canvas></div>
+      <p class="hint">지금 계획 기준 · ${F}세 ${won(at(F)?.real)} · ${p.end_age}세 ${won(at(p.end_age)?.real)}${divGoal ? '. 원금을 팔지 않아서 배당이 적은 종목도 그대로 불어나요.' : ''}</p></div>
+    <details class="card fire-fold"><summary>해마다 자세히 (지금 계획)</summary>
+      ${divGoal
+        ? `<table class="fire-tbl"><thead><tr><th>나이</th><th>배당(세전)</th><th>세금</th><th>건보료</th><th>연금</th><th>세후 월</th></tr></thead>
+          <tbody>${run.rows.filter(y => ages.includes(y.age)).map(y => `<tr><td>${y.age}세</td>${[y.div, y.tax, y.nhis, y.pension].map(v => cell(v * y.real)).join('')}<td class="${income(y) < p.monthly - 1 ? 'up' : ''}">${view.hide ? '••' : short(income(y))}</td></tr>`).join('')}</tbody></table>
+          <p class="hint">세금은 배당세(미국 15% 포함)와 연금 인출세예요. 세후 월 = (배당 − 세금 − 건보료 + 연금) ÷ 12. 목표 아래인 해는 빨간색이에요.</p>`
+        : `<table class="fire-tbl"><thead><tr><th>나이</th><th>연초 자산</th><th>배당</th><th>세금</th><th>건보료</th><th>매도·연금</th></tr></thead>
+          <tbody>${run.rows.filter(y => ages.includes(y.age)).map(y => `<tr><td>${y.age}세</td>${[y.start, y.div, y.tax, y.nhis, y.sold + y.pension].map(v => cell(v * y.real)).join('')}</tr>`).join('')}</tbody></table>
+          <p class="hint">세금은 배당세(미국 15% 포함)·양도세·연금 인출세를 합친 값이에요.${run.ok ? '' : ` ${run.out}세에 자산이 바닥나요.`}</p>`}
+      <table class="fire-tbl"><thead><tr><th>종목</th>${vAges.map(a => `<th>${a}세</th>`).join('')}</tr></thead>
+      <tbody>${names.map((name, i) => `<tr><td class="name">${esc(name)}</td>${vAges.map(a => { const y = at(a); return y ? cell(realOf(y, i)) : '<td>—</td>'; }).join('')}</tr>`).join('')}</tbody></table>
+    </details>
+    <details class="card fire-fold"><summary>계산 기준</summary><ul class="fire-notes">${notes.map(t => `<li>${t}</li>`).join('')}</ul></details>`;
+  drawFireCharts(p, r, names);
+}
+
+const FIRE_COLORS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
+const firePill = (v, goal) => `<span class="fire-pill ${v >= goal - 1 ? 'ok' : 'no'}" id="fire-pill">${v >= goal - 1 ? '목표 달성' : `월 ${won(goal - v)} 부족`}</span>`;
+// One item's monthly buy as a bar to drag, in won a month (its own unit shown beside it). Every bar shares one scale
+// (max), so their lengths compare like a bar chart.
+function fireSlider(it, i, monthly, max) {
+  return `<div class="fire-slide"><div class="fire-slide-head"><b>${esc(it.name || it.match || '이름 없음')}</b><span data-slabel="${i}">${fireAmount(it.unit, it.amount)} · 월 ${won(monthly)}</span></div>
+    <input type="range" class="fire-range" data-slide="${i}" min="0" max="${max}" step="10000" value="${Math.round(monthly)}"
+      style="--v:${monthly / max * 100}%;--c:var(--${FIRE_COLORS[i % FIRE_COLORS.length]})" aria-label="${esc(it.name || it.match)} 월 매수액"></div>`;
+}
+// A won-a-month amount back in the item's own unit, rounded to what a person would set
+function fireFromMonthly(a, v, fx) {
+  const r = (x, step) => Math.round(x / step) * step;
+  if (a.unit === 'krw_day') return r(v * 12 / 365, 1000);
+  if (a.unit === 'usd_bday') return r(v / (fx * 250 / 12), 0.5);
+  if (a.unit === 'shares_week') return r(v / (a.price * (a.cur === 'USD' ? fx : 1) * 52 / 12), 0.1);
+  return r(v, 10000);
+}
+let fireFrame = 0;
+function fireLive() {  // while a slider moves: the headline, the scenario figures and the total, from one run each
+  fireFrame = 0;
+  const f = state.fire, p = f.plan, shift = f.shift || 0;
+  const caps = FIRE_SCEN.map(([d]) => fireHeadline({ ...p, shift: d }, f.s).value), cap = caps[FIRE_SCEN.findIndex(([d]) => d === shift)];
+  $('#fire-big').textContent = won(cap);
+  $('#fire-pill').outerHTML = firePill(cap, p.monthly);
+  $('#fire-bar').style.width = Math.min(100, cap / p.monthly * 100) + '%';
+  caps.forEach((v, i) => { const el = $(`[data-cap="${i}"]`); if (el) el.textContent = view.hide ? '' : short(v); });
+  const A = fireAssets(p, f.s);
+  $('#fire-total').textContent = '월 ' + won(A.slice(0, -1).reduce((t, a) => t + fireContrib(a, p, f.fx, 0), 0));
+}
+
+function drawFireCharts(p, r, names) {
+  if (!window.Chart) { document.querySelectorAll('#fire-out .chart-box').forEach(el => el.innerHTML = '<p class="hint">차트를 불러오지 못했어요.</p>'); return; }
+  const cs = getComputedStyle(document.documentElement), c = n => cs.getPropertyValue('--' + n).trim(), divGoal = p.goal === 'dividend';
+  const alpha = (hex, a) => `rgba(${[1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(',')},${a})`;
+  const opts = stacked => ({ responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'top', align: 'start', labels: { usePointStyle: true, pointStyle: 'rectRounded', boxWidth: 8, boxHeight: 8, color: c('sub') } },
+      tooltip: { callbacks: { title: xs => xs[0].label + '세', label: x => ` ${x.dataset.label} ${won(x.parsed.y)}` } } },
+    scales: { x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+      y: { stacked, grid: { color: c('line') }, border: { display: false }, ticks: { callback: short, maxTicksLimit: 5 } } } });
+  const line = (label, data, color, dash) => ({ label, data, borderColor: c(color), backgroundColor: c(color), borderWidth: 2, pointRadius: 0, tension: 0.2, borderDash: dash });
+  const y = run => x => {  // retirement years from the rows (pension included); before that, what the dividends would pay
+    if (!divGoal) return x.real;
+    const row = run.rows.find(w => w.age === Math.round(x.age)), f = (1 + p.inflation) ** x.T;
+    return row ? (row.net + row.pension * (1 - p.pension_tax)) / 12 * row.real : fireNet(p, x.div, f) / 12 / f;
+  };
+  const base = r.need && r.need.path.length > r.now.path.length ? r.need : r.now, ages = base.path.map(x => Math.round(x.age));
+  for (const id of ['c-fire', 'c-fire-assets']) state.charts[id]?.destroy();
+  state.charts['c-fire'] = new Chart($('#c-fire'), { type: 'line', data: { labels: ages, datasets: [
+    line('지금 계획', r.now.path.map(y(r.now)), 'accent'),
+    r.need && r.need !== r.now && line('목표에 닿는 계획', r.need.path.map(y(r.need)), 'neutral', [4, 4]),
+    divGoal && line('목표', base.path.map(() => p.monthly), 'up', [2, 3])].filter(Boolean) }, options: opts(false) });
+  // the five biggest items at the end, then the rest as one band
+  const run = r.now, last = run.path.at(-1), order = names.map((_, i) => i).sort((a, b) => last.vals[b] - last.vals[a]);
+  const real = (x, i) => x.vals[i] / (1 + p.inflation) ** x.T;
+  const band = (label, f, color) => ({ label, data: run.path.map(f), fill: 'stack', borderColor: c(color), backgroundColor: alpha(c(color), 0.3), borderWidth: 1.5, pointRadius: 0, tension: 0.2 });
+  const sets = order.slice(0, 5).map(i => band(names[i], x => real(x, i), FIRE_COLORS[i % FIRE_COLORS.length]));  // the slider's colour
+  if (order.length > 5) sets.push(band('그 밖', x => order.slice(5).reduce((t, i) => t + real(x, i), 0), 's1'));
+  state.charts['c-fire-assets'] = new Chart($('#c-fire-assets'), { type: 'line', data: { labels: run.path.map(x => Math.round(x.age)), datasets: sets }, options: opts(true) });
+}
+
+async function loadFire() {
+  if (!state.fire) {
+    let saved = null;
+    try { saved = await api('/api/fire'); } catch (e) { if (e.status !== 503) toast('FIRE 계획을 불러오지 못했어요: ' + e.message); }
+    state.fire = { plan: fireNorm(saved ?? FIRE_DEFAULT), shift: 0 };
+  }
+  if (!state.holdings) { $('#fire-out').innerHTML = '<div class="card hint">보유 잔고를 불러오는 중…</div>'; await loadHoldings(); }
+  renderFireForm(); renderFire();
+}
+let fireTimer;
+$('#f-fire').addEventListener('input', e => {
+  if (e.target.name === 'unit') e.target.closest('.fire-item').querySelector('[data-amt]').textContent = FIRE_AMT[e.target.value];
+  clearTimeout(fireTimer);
+  fireTimer = setTimeout(() => { state.fire.plan = readFire(); renderFire(); }, 400);
+});
+$('#f-fire').addEventListener('click', e => {
+  const del = e.target.closest('[data-fire-del]'), add = e.target.closest('#fire-add');
+  if (!del && !add) return;
+  const p = state.fire.plan = readFire();
+  if (del) p.items.splice(+del.dataset.fireDel, 1);
+  else p.items.push({ name: '', match: '', kind: 'us', unit: 'krw_month', amount: 0, ret: 0.07, div: null, weight: null, price: null });
+  renderFireForm(); renderFire();
+  if (add) { const box = [...document.querySelectorAll('#f-fire .fire-item')].at(-1); box.open = true; box.querySelector('[name=name]').focus(); }
+});
+$('#fire-out').addEventListener('input', e => {
+  const sl = e.target.closest('[data-slide]');
+  if (!sl) return;
+  const i = +sl.dataset.slide, f = state.fire, it = f.plan.items[i], a = f.base[i];
+  it.amount = fireFromMonthly(a, +sl.value, f.fx);
+  const monthly = fireContrib({ ...a, amount: it.amount }, f.plan, f.fx, 0);
+  sl.style.setProperty('--v', sl.value / sl.max * 100 + '%');
+  $(`[data-slabel="${i}"]`).textContent = `${fireAmount(it.unit, it.amount)} · 월 ${won(monthly)}`;
+  if (!fireFrame) fireFrame = requestAnimationFrame(fireLive);
+});
+$('#fire-out').addEventListener('change', e => {  // let go: the form shows the new amount, and everything is redone
+  const sl = e.target.closest('[data-slide]');
+  if (!sl) return;
+  const i = +sl.dataset.slide, input = $(`#f-fire .fire-item[data-i="${i}"] [name=amount]`);
+  if (input) input.value = fireVal(state.fire.plan.items[i].amount);
+  renderFire();
+});
+$('#fire-out').addEventListener('click', e => {
+  const b = e.target.closest('[data-shift]');
+  if (b) { state.fire.shift = Number(b.dataset.shift); renderFire(); }
+});
+onSubmit('#f-fire', async () => {
+  const plan = state.fire.plan = readFire();
+  done(await api('/api/fire', { method: 'POST', body: JSON.stringify(plan) }), '저장했어요');
+});
+
 // tabs
 function show(tab) {
-  if (!['home', 'holdings', 'review', 'input'].includes(tab)) tab = 'home';
+  if (!['home', 'holdings', 'review', 'fire', 'input'].includes(tab)) tab = 'home';
   document.querySelectorAll('.tab').forEach(s => s.hidden = s.id !== 'tab-' + tab);
   document.querySelectorAll('.tabbar button').forEach(b => b.setAttribute('aria-current', b.dataset.go === tab ? 'page' : 'false'));
   // cloud mode: what the Worker serves changes only with the PC's next push (every 15 min), so a revisit keeps what
@@ -1081,6 +1661,7 @@ function show(tab) {
   const keep = state.cloud;
   if (tab === 'holdings' && !(keep && state.holdings)) loadHoldings();
   if (tab === 'review' && !(keep && state.review)) loadReview();
+  if (tab === 'fire') loadFire();
   if (tab === 'input') { loadFormats(); if (!(keep && state.snaps)) loadSnaps(); }
   history.replaceState(null, '', '#' + tab);
   scrollTo(0, 0);

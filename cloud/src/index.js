@@ -41,12 +41,12 @@ const MAX_BODY = 1_400_000   // bytes of an op's body; base64 makes it 1,866,668
 const MAX_STATE = 1_900_000  // bytes of one pushed item's JSON
 const PULL_BUDGET = 2_000_000  // base64 bytes per GET /pc/ops answer: at most one big body, so parsing stays small
 const READS = { '/api/summary': 'summary', '/api/accounts': 'accounts', '/api/holdings': 'holdings',
-                '/api/import/formats': 'formats' }
+                '/api/import/formats': 'formats', '/api/fire': 'fire' }
 const STATE_KEYS = new Set([...Object.values(READS), 'snapshots'])
 const MONTH = /^transactions-\d{4}-\d{2}$/  // one month of transactions, the only other state key
 const MONTHS = ['transactions-0000-00', 'transactions-9999-99']  // the key range holding every MONTH key, and no other
 // the writes web.py has, as "METHOD /path"
-const WRITE = /^(POST \/api\/(transactions|snapshots|accounts|import|sync|inbox\/part|gold)|(PATCH|DELETE) \/api\/transactions\/\d+|DELETE \/api\/snapshots|DELETE \/api\/accounts\/[\w.:@%-]+)$/
+const WRITE = /^(POST \/api\/(transactions|snapshots|accounts|import|sync|inbox\/part|gold|fire)|(PATCH|DELETE) \/api\/transactions\/\d+|DELETE \/api\/snapshots|DELETE \/api\/accounts\/[\w.:@%-]+)$/
 const LOCAL = new Set(['localhost', '127.0.0.1', '[::1]'])
 const RS256 = { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }
 
