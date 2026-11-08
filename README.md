@@ -6,7 +6,7 @@
 
 <sub>화면은 모두 데모 데이터입니다.</sub>
 
-> **English summary.** 개미장부 ("ant's ledger"; Korean retail investors call themselves *gaemi*, ants) is a self-hosted portfolio tracker for Korean brokerage accounts. It pulls balances from the KIS (Korea Investment & Securities) and Toss Securities Open APIs, infers deposits and withdrawals from daily cash changes, computes money-weighted returns (Modified Dietz) with and without dividends and in USD terms, and serves a mobile web app. Your ledger and API keys stay on your own PC; an optional Cloudflare Worker (free plan) gives your phone a read copy behind Cloudflare Access. MIT licensed.
+> **English summary.** 개미장부 ("ant's ledger"; Korean retail investors call themselves *gaemi*, ants) is a self-hosted portfolio tracker for Korean brokerage accounts. It pulls balances from the KIS (Korea Investment & Securities) and Toss Securities Open APIs, infers deposits and withdrawals from daily cash changes, computes money-weighted returns (Modified Dietz) with and without dividends and in USD terms, simulates early retirement on dividend income (FIRE) under Korean taxes and health insurance, and serves a mobile web app. Your ledger and API keys stay on your own PC; an optional Cloudflare Worker (free plan) gives your phone a read copy behind Cloudflare Access. MIT licensed.
 
 ## 무엇을 보여 주나
 
@@ -15,6 +15,7 @@
 - **배당**: 보유한 배당주만으로 계산한 배당수익률, 예상 연 배당금, 종목별 배당률, 월별 배당금.
 - **보유 종목**: 증권사 API로 지금 잔고를 조회해 종목별 평가액과 손익(원화, 달러 기준)을 보여 주고, 원그래프를 계좌별 또는 자산 종류별(주식·채권·금·코인·현금)로 바꿔 볼 수 있습니다.
 - **입출금 자동 추정**: 한투·토스는 입출금 내역 API가 없어서, 매일 기록한 현금 변화에서 매매대금과 배당을 빼서 입출금을 추정합니다.
+- **FIRE 시뮬레이션**: 원하는 나이에 배당만으로(또는 자산을 나눠 써서) 세후 월 얼마를 받을 수 있는지, 모자라면 매달 얼마를 어떤 종목에 더 넣어야 하는지 계산합니다. 한국 세금(배당 원천징수, 금융소득종합과세, 해외주식 양도세)과 지역가입자 건강보험료를 반영하고, 종목별 막대를 끌면 결과가 바로 바뀝니다.
 - **알림 배너**: 동기화가 실패하면 원인과 해결 방법을 화면 위에 보여 줍니다(예: 토스 허용 IP 미등록).
 - **편의 기능**: 금액 숨기기, ₩/$ 전환, 밝은 테마, 폰에서 화면 녹화·사진 올리기.
 
@@ -90,6 +91,38 @@ AI 코딩 도구(Claude Code, Codex, Cursor 등)를 쓰신다면 이 저장소�
 - `DC_ACCOUNT`로 지정한 계좌도 지울 수 없습니다. 지우면 다음 동기화가 실패하므로 먼저 `.env`에서 `DC_ACCOUNT`를 지우세요.
 - 예금·적금이나 금현물 계좌를 지웠다면 `.env`의 `ASSETLOG_PRINCIPAL_ONLY`나 `ASSETLOG_GOLD_ACCOUNT`에서도 그 id를 빼 두세요. 남아 있어도 동작에는 문제가 없습니다.
 
+## FIRE 시뮬레이션
+
+`FIRE` 탭은 지금 가진 자산과 매수 계획에서 출발해, 목표 나이부터 세후 월 얼마를 받을 수 있는지 계산합니다. 투자 권유가 아니라, 입력한 가정대로만 움직이는 계산기입니다.
+
+**쓰는 법**
+1. `내 계획`에 현재 나이, FIRE 나이, 목표 세후 월 금액(현재 가치), 계산 끝 나이를 넣습니다.
+2. `매수 계획`에 종목을 넣습니다. `연결`에 보유 종목 코드(예: `VOO`)나 계좌 ID를 넣으면 그 평가액에서 시작합니다.
+   - 사는 방식: 원/매일(휴일 포함), 달러/영업일, 주/매주, 원/매월, 또는 `더 사지 않음`(지금 보유분만 둠)
+   - 기대 총수익률(배당 포함)과 배당률은 종목마다 가정합니다. 총수익률을 비우면 가격이 그대로라고 보고, 배당률을 비우면 지금 배당률(최근 12개월 분배금 기준)을 씁니다.
+   - 늘릴 때 비중: 목표에 모자라 더 넣어야 하는 금액을 나누는 비율입니다. 비우면 지금 매수 비율대로 나눕니다.
+3. 맨 위에 지금 계획으로 받는 세후 월 금액과 목표 대비 상태가 나옵니다. `매달 사는 금액` 막대를 끌면 바로 다시 계산됩니다.
+4. `저장`을 눌러야 계획이 `data/fire.json`에 남고 폰에도 올라갑니다. 계획은 기기 사이에 하나만 있으므로, 다른 기기에서 저장하면 덮어씁니다.
+
+**목표 방식**
+- **배당만으로 생활**: 원금은 팔지 않고 배당(과 원하면 퇴직연금)으로 삽니다. 기준은 `은퇴 첫해에 목표 이상` 또는 `계산 끝 나이까지 매년 목표 이상`(최악의 해 기준)입니다.
+- **자산을 나눠 쓰기**: 배당으로 모자란 만큼 해마다 자산을 팔아, 계산 끝 나이까지 버티는지 봅니다.
+
+**반영하는 것**
+- 세금(2026년 기준, 과세 구간은 물가와 무관하게 고정):
+  - 미국 배당 원천징수 15%
+  - 금융소득 연 2,000만원 초과분 종합과세(비교과세, 외국납부세액공제 반영)
+  - 해외주식 양도소득세(연 250만원 공제 뒤 22%)
+  - 금현물(KRX) 매매차익 비과세
+- 건강보험료(지역가입자): 배당이 연 1,000만원을 넘으면 배당 전액에 건보료율 7.19%와 장기요양 0.9448%. 재산분은 직접 넣습니다.
+- 퇴직연금(DC·IRP): 받는 나이를 넣으면 그때부터 계산 끝 나이까지 나눠 받고, 비우면 안 받는다고 봅니다. **국민연금은 넣지 않습니다.**
+- 시나리오: `기본`은 입력한 가정 그대로, `보수적`과 `최악`은 모든 종목의 기대 총수익률을 2%p, 4%p 낮춥니다.
+- 목표에 모자라면 세 가지 방법을 보여 줍니다: 매달 더 넣을 금액(비중대로 나눔), FIRE를 늦출 나이, 지금 계획으로 가능한 목표 금액.
+
+**한계**
+- 수익률·배당률·환율은 매년 가정대로만 움직입니다. 실제 시장의 등락과 그 순서(은퇴 직후 하락장 등)는 반영하지 않습니다. 레버리지 ETF처럼 변동이 큰 종목은 결과가 특히 크게 달라질 수 있습니다.
+- 일하는 동안 배당이 연 2,000만원을 넘는 해의 추가 세금(근로소득과 합산)은 계산하지 않고 경고만 합니다.
+
 ## 폰에서 쓰기 (Cloudflare 무료 플랜)
 
 Cloudflare 계정만 있으면 됩니다. 결제는 필요 없지만, Zero Trust를 처음 켤 때 무료 플랜도 카드 등록을 요구할 수 있습니다(청구는 되지 않습니다). 아래 명령은 `cloud/`에서 실행합니다.
@@ -119,7 +152,7 @@ Cloudflare 계정만 있으면 됩니다. 결제는 필요 없지만, Zero Trust
 
 ## 보안
 
-- API 키는 `.env`(권한 600)에만 둡니다. `.env`, `data/`(장부·토큰), `inbox/`, `cloud/wrangler.toml`은 `.gitignore`에 들어 있습니다.
+- API 키는 `.env`(권한 600)에만 둡니다. `.env`, `data/`(장부·토큰·FIRE 계획), `inbox/`, `cloud/wrangler.toml`은 `.gitignore`에 들어 있습니다.
 - 증권사 Open API 키가 있으면 **주문**이 가능합니다(출금·이체는 불가). 키가 새어 나갔다고 의심되면 증권사 사이트에서 바로 재발급하세요. 토스는 허용 IP가 있어 위험이 작고, 한투는 IP 제한이 없습니다.
 - AI 도구에 키를 보여 주지 마세요. 작업 폴더를 통째로 비교·복사하는 명령은 `.env`와 `data/`를 빼고 실행해야 합니다.
 - 로컬 서버는 `127.0.0.1`에서만 열리고, 인터넷 주소에서 온 요청과 다른 사이트에서 보낸 쓰기 요청을 거절합니다.
@@ -147,6 +180,7 @@ python3 -m pytest -q               # 테스트 (cloud/ 에서는 npm test)
 | `assetlog/dcmodel.py`, `principal.py`, `gold.py` | DC 퇴직연금 모델, 예금·적금, 금현물 |
 | `assetlog/importers.py` | 한투 엑셀, 토스 PDF, CSV 가져오기 |
 | `assetlog/web.py`, `static/` | JSON API와 단일 파일 화면 (PWA) |
+| `static/index.html`의 `fire:begin`~`fire:end` | FIRE 시뮬레이션 계산 (화면 안에서 실행, `tests/test_fire.py`가 node로 검사) |
 | `assetlog/cloud.py`, `cloud/` | PC ↔ Cloudflare Worker 주고받기, Worker 코드 |
 | `deploy/` | systemd 사용자 타이머와 설치 스크립트 |
 | `docs/contracts/*.json` | 공식 자료로 확인한 API·파일 형식 메모 |
