@@ -123,6 +123,31 @@ AI 코딩 도구(Claude Code, Codex, Cursor 등)를 쓰신다면 이 저장소�
 - 수익률·배당률·환율은 매년 가정대로만 움직입니다. 실제 시장의 등락과 그 순서(은퇴 직후 하락장 등)는 반영하지 않습니다. 레버리지 ETF처럼 변동이 큰 종목은 결과가 특히 크게 달라질 수 있습니다.
 - 일하는 동안 배당이 연 2,000만원을 넘는 해의 추가 세금(근로소득과 합산)은 계산하지 않고 경고만 합니다.
 
+## 안드로이드 폰에서 돌리기 (PC를 꺼 둬도 동기화)
+
+동기화는 장부와 키가 있는 기기에서 돕니다. PC를 자주 끈다면, 집 와이파이에 연결하고 충전기를 꽂아 둔 안 쓰는 안드로이드 폰이 그 역할을 대신할 수 있습니다. 집 IP 그대로 나가므로 토스 허용 IP도 바꿀 필요가 없습니다.
+
+**장부는 한 곳에만 둡니다.** 폰으로 옮기면 PC의 타이머는 끄고(`systemctl --user disable --now assetlog-sync.timer assetlog-cloud.timer`), PC에서도 폰처럼 Cloudflare 주소로 봅니다.
+
+1. 폰에 **Termux**를 설치합니다. 플레이스토어 판은 부팅 때 스크립트를 돌리는 기능이 들어 있고, [F-Droid](https://f-droid.org) 판을 쓴다면 **Termux:Boot**도 같은 곳에서 설치해 한 번 열어 둡니다.
+2. Termux에서:
+   ```text
+   pkg update -y && pkg upgrade -y
+   pkg install -y openssh proot-distro cronie termux-services
+   proot-distro install debian
+   proot-distro login debian -- bash -c "apt-get update && apt-get install -y python3 python3-venv git ca-certificates tzdata && git clone https://github.com/HyeonguDO/gaemi.git /root/assetlog && python3 -m venv /root/venv && /root/venv/bin/pip install -r /root/assetlog/requirements.txt"
+   ```
+3. PC의 `.env`와 `data/`를 폰의 데비안 안 `/root/assetlog/`로 옮깁니다. 같은 와이파이에서 SSH(`sshd`, 포트 8022)로 보내면 인터넷을 거치지 않습니다. Termux 쪽 실제 위치는 proot-distro 버전에 따라 `$PREFIX/var/lib/proot-distro/containers/debian/rootfs/root/assetlog` 또는 `.../installed-rootfs/debian/root/assetlog`입니다.
+4. Termux에서 `sh $PREFIX/var/lib/proot-distro/containers/debian/rootfs/root/assetlog/deploy/termux/install.sh`를 실행합니다. 매일 23:50 동기화와 15분마다 폰 사본 올리기를 cron에 등록하고, 폰을 다시 켜도 이어서 돌도록 Termux:Boot 스크립트를 넣습니다. 실행 기록은 Termux 홈의 `gaemi-sync.log`, `gaemi-cloud.log`에 남습니다.
+5. 폰 설정: 배터리에서 Termux를 '제한 없음'으로 두고(밤에 꺼지지 않게), 충전기에 계속 꽂아 둘 테니 '배터리 보호'(최대 85%)를 켜고, 화면 잠금을 걸어 두세요. 키가 이 폰에 있습니다. 이 폰으로 다른 앱을 깔거나 웹을 보지 않는 게 안전합니다.
+
+**PC에서 관리하기** (`deploy/phone.sh`, `~/.ssh/config`에 폰을 가리키는 `gaemi-phone` 별칭이 있어야 함)
+- 개발은 PC에서 데모 장부로 하고, GitHub에 올린 뒤 `deploy/phone.sh apply`로 폰에 적용합니다(코드 받기, 패키지, cron). 화면만 바뀌었다면 PC에서 `npx wrangler deploy`도 합니다.
+- `deploy/phone.sh backup`은 폰의 장부를 PC의 `~/gaemi-backups/<시각>/`에 복사합니다(키와 토큰은 빼고). `deploy/phone.sh timer`로 PC가 켜질 때와 12시간마다 자동으로 하게 둘 수 있습니다.
+- `deploy/phone.sh status`로 폰의 최근 동기화·올리기 기록을 봅니다.
+- PC에는 키가 필요 없습니다. 폰으로 옮긴 뒤에는 PC의 `.env`를 지우고, PC에서는 `deploy/install.sh`를 실행하지 마세요(PC 동기화 타이머를 다시 켭니다).
+- 폰의 SSH는 키로만 열고, `authorized_keys`에 `from="<집 네트워크>"`를 붙여 집 와이파이에서만 받게 하세요.
+
 ## 폰에서 쓰기 (Cloudflare 무료 플랜)
 
 Cloudflare 계정만 있으면 됩니다. 결제는 필요 없지만, Zero Trust를 처음 켤 때 무료 플랜도 카드 등록을 요구할 수 있습니다(청구는 되지 않습니다). 아래 명령은 `cloud/`에서 실행합니다.
@@ -182,7 +207,7 @@ python3 -m pytest -q               # 테스트 (cloud/ 에서는 npm test)
 | `assetlog/web.py`, `static/` | JSON API와 단일 파일 화면 (PWA) |
 | `static/index.html`의 `fire:begin`~`fire:end` | FIRE 시뮬레이션 계산 (화면 안에서 실행, `tests/test_fire.py`가 node로 검사) |
 | `assetlog/cloud.py`, `cloud/` | PC ↔ Cloudflare Worker 주고받기, Worker 코드 |
-| `deploy/` | systemd 사용자 타이머와 설치 스크립트 |
+| `deploy/` | systemd 사용자 타이머와 설치 스크립트. `deploy/termux/`: 안드로이드 폰용 cron 실행·설치·백업 스크립트, `deploy/phone.sh`: PC에서 폰에 적용·백업 |
 | `docs/contracts/*.json` | 공식 자료로 확인한 API·파일 형식 메모 |
 
 ## 주의
