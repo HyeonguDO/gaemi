@@ -18,8 +18,8 @@ for dir in "$HOME/.config/termux/boot" "$HOME/.termux/boot"; do
   chmod 700 "$dir/gaemi"
 done
 # fallback when a boot is missed: opening the Termux app starts them again
-grep -q 'gaemi: keep sshd and crond up' "$HOME/.bashrc" 2>/dev/null ||
-  printf '%s\n' 'pgrep -x sshd >/dev/null || sshd; pgrep -x crond >/dev/null || crond  # gaemi: keep sshd and crond up' >> "$HOME/.bashrc"
+sed -i '/gaemi: keep sshd and crond up/d' "$HOME/.bashrc" 2>/dev/null || true  # an older line without the wake lock
+printf '%s\n' 'termux-wake-lock; pgrep -x sshd >/dev/null || sshd; pgrep -x crond >/dev/null || crond  # gaemi: keep sshd and crond up' >> "$HOME/.bashrc"
 pgrep -x crond >/dev/null || crond
 termux-wake-lock
 crontab -l | grep gaemi
