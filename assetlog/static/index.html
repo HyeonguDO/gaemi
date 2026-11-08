@@ -248,6 +248,7 @@ details.fire-fold > summary { font-size: 15px; font-weight: 700; padding: 0; }
 .offline { margin: 0 4px 8px; padding: 10px 14px; border-radius: 12px; background: var(--warn-bg); color: var(--warn); font-size: 13px; font-weight: 600; }
 .cloudbar { margin: 0 4px 8px; padding: 8px 12px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); color: var(--sub); font-size: 12px; font-weight: 600; }
 .cloudbar p { margin-top: 4px; color: var(--warn); }
+.cloudbar.stale { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn); }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -551,15 +552,23 @@ function kst(iso) {
     hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d).map(x => [x.type, x.value]));
   return `${p.month}월 ${p.day}일 ${p.hour}:${p.minute}`;
 }
+// The PC (or phone) that holds the ledger pushes every 15 minutes: an hour without a push means it stopped.
+const STALE_MIN = 60;
+const ago = min => min < 60 ? `${Math.round(min)}분` : min < 1440 ? `${Math.floor(min / 60)}시간 ${Math.round(min % 60)}분` : `${Math.floor(min / 1440)}일`;
 function renderMeta() {
   const m = state.meta, el = $('#cloud');
   if (!m) return;
+  const age = m.pushed_at ? (Date.now() - new Date(m.pushed_at)) / 6e4 : null;
+  el.classList.toggle('stale', age > STALE_MIN);
   const op = o => OPS[`${o.method} ${o.path.replace(/^(\/api\/accounts)\/.+$|\/\d+$/, '$1')}`] || `${o.method} ${o.path}`;
   el.hidden = false;
   el.innerHTML = esc((m.pushed_at ? `PC 동기화 기준 ${kst(m.pushed_at)}` : 'PC에서 아직 올라온 데이터가 없어요')
       + (m.pending > 0 ? ` · 반영 대기 ${m.pending}건` : ''))
+    + (age > STALE_MIN ? `<p class="stale-note">${esc(`${ago(age)}째 새 데이터가 안 왔어요. 장부가 있는 기기(PC 또는 폰)가 꺼졌거나 멈췄을 수 있어요. 안드로이드 폰이라면 Termux 앱을 한 번 열어 주세요.`)}</p>` : '')
     + state.errs.map(o => `<p>${esc(`반영하지 못했어요 · ${kst(o.at)} ${op(o)}: ${mask(o.result || '이유 없음')}`)}</p>`).join('');
 }
+setInterval(renderMeta, 60_000);  // the age moves on while the page stays open
+document.addEventListener('visibilitychange', () => { if (!document.hidden && state.cloud) loadMeta(); });  // back to the app: ask again
 // sw.js answers from the phone's saved copy when the server can't be reached, and marks the answer X-Offline.
 function showOffline(savedAt) {
   const el = $('#offline');

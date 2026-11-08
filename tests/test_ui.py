@@ -337,7 +337,7 @@ addEventListener('load', async () => {
 });
 async function cloudSteps() {
   const metas = () => T.calls.filter(c => c[0] === 'GET /api/meta').length, said = () => { const t = $('#toast').textContent; $('#toast').textContent = ''; return t; };
-  await step('cloud_ui', () => ({ bar: $('#cloud').textContent, errs: $('#cloud').querySelectorAll('p').length, sync: $('#sync-btn').textContent,
+  await step('cloud_ui', () => ({ bar: $('#cloud').textContent, errs: $('#cloud').querySelectorAll('p:not(.stale-note)').length, stale: $('#cloud .stale-note')?.textContent ?? null, sync: $('#sync-btn').textContent,
     inbox_hidden: $('#f-inbox').hidden, refresh_disabled: $('#hd-refresh').disabled, hint: !$('#hd-hint').hidden, logout: !$('#logout-card').hidden }));
   await step('cloud_hidden', () => { toggleView('hide'); const t = $('#cloud').textContent; toggleView('hide'); return t; });
   await step('cloud_holdings', async () => { show('holdings'); await wait(100); return [$('#hd-refresh').disabled, !!$('#hd-body .card')]; });
@@ -376,9 +376,9 @@ async function cloudSteps() {
     return [said(), $('#im-out').hidden];
   });
   await step('cloud_once', async () => {
-    await loadMeta(); const again = $('#cloud').querySelectorAll('p').length;
+    await loadMeta(); const again = $('#cloud').querySelectorAll('p:not(.stale-note)').length;
     state.errs = []; await loadMeta();  // as after a reload: the device remembers what it showed
-    return [again, $('#cloud').querySelectorAll('p').length, localStorage.getItem('op-err')];
+    return [again, $('#cloud').querySelectorAll('p:not(.stale-note)').length, localStorage.getItem('op-err')];
   });
 }
 })();</script>"""
@@ -484,6 +484,7 @@ def test_cloud_banner_shows_push_time_pending_and_each_error_once(cloud):
     assert ui["bar"].startswith("PC 동기화 기준 9월 26일 00:05 · 반영 대기 2건")  # KST, 24-hour
     assert "반영하지 못했어요 · 9월 25일 23:30 평가액 입력: 모델 값과 7% 달라요 (54,000,000원)" in ui["bar"]  # at is UTC
     assert ui["errs"] == 1  # only the op with status error
+    assert "새 데이터가 안 왔어요" in ui["stale"]  # pushed weeks before now: the warning shows
     assert "54,000,000" not in cloud["cloud_hidden"] and "••" in cloud["cloud_hidden"]  # the hide toggle covers it
     assert cloud["cloud_once"] == [1, 0, "9"]  # not repeated on a refresh, nor after a reload
 
