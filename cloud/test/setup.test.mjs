@@ -29,10 +29,14 @@ test('inspect: refuses a taken name, a missing subdomain or Zero Trust, and name
   await assert.rejects(inspect(fakeCloudflare(base).api, 'A', 'assetlog'), /이미 있어요. 덮어쓰지 않아요/)
   await assert.rejects(inspect(fakeCloudflare([['GET', '/accounts/A/workers/subdomain', () => [404, null]], ...base.slice(1)]).api, 'A', 'gaemi'),
     /workers.dev 주소가 아직 없어요/)
+  const made = fakeCloudflare([['GET', '/accounts/A/workers/subdomain', () => [404, null]],
+    ['PUT', '/accounts/A/workers/subdomain', b => [200, { subdomain: b.subdomain }]], ...base.slice(1)])
+  assert.equal((await inspect(made.api, 'A', 'gaemi', async () => 'newsub')).domain, 'gaemi.newsub.workers.dev')
+  assert.deepEqual(made.calls.find(c => c[0] === 'PUT').slice(0, 3), ['PUT', '/accounts/A/workers/subdomain', { subdomain: 'newsub' }])
   await assert.rejects(inspect(fakeCloudflare([base[0], ['GET', '/accounts/A/access/organizations', () => [404, null]], ...base.slice(2)]).api, 'A', 'gaemi'),
     /Zero Trust가 아직/)
   await assert.rejects(inspect(fakeCloudflare([base[0], ['GET', '/accounts/A/access/organizations', () => [403, null]]]).api, 'A', 'gaemi'),
-    e => e instanceof CfError && /Access: Organizations, Identity Providers, and Groups \/ Read/.test(e.message))
+    e => e instanceof CfError && /Zero Trust \/ Edit/.test(e.message))
 })
 
 test('create: D1 and schema, then the token saved before anything else can fail, then Access, deploy, PC key', async () => {
@@ -77,7 +81,7 @@ test('a missing permission is explained, and what was made so far is recorded fo
     ['POST', '/accounts/A/access/service_tokens', () => [403, null]]])
   const records = []
   await assert.rejects(create(api, 'A', { name: 'gaemi', email: 'a@b.co', team: 't', domain: 'd', schema: 'SELECT 1;',
-    save: () => {}, record: s => records.push({ ...s }), deploy: () => {} }), /Access: Service Tokens \/ Edit/)
+    save: () => {}, record: s => records.push({ ...s }), deploy: () => {} }), /Zero Trust \/ Edit/)
   assert.deepEqual(records.at(-1), { accountId: 'A', name: 'gaemi', databaseId: 'db-uuid' })
 })
 
@@ -100,4 +104,11 @@ test('a wrong or malformed API token is named as such, not as a missing permissi
     const api = client('x', async () => ({ ok: false, status, json: async () => ({ success: false, errors }) }))
     await assert.rejects(api('GET', '/accounts', undefined, 'Account Settings / Read'), /API 토큰이 올바르지 않아요/)
   }
+})
+
+test('the token link prefills the four permissions', async () => {
+  const { TOKEN_URL } = await import('../setup.mjs')
+  const keys = JSON.parse(decodeURIComponent(new URL(TOKEN_URL).searchParams.get('permissionGroupKeys')))
+  assert.deepEqual(keys, [{ key: 'workers_scripts', type: 'edit' }, { key: 'd1', type: 'edit' }, { key: 'teams', type: 'edit' },
+    { key: 'account_settings', type: 'read' }])
 })

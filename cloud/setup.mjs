@@ -5,9 +5,9 @@
 //   node setup.mjs --env ../data/.env   where the app's .env is (default: ../data/.env if it exists, else ../.env)
 //   node setup.mjs --print              print the four .env lines instead of writing them (a phone that runs the app)
 //   node setup.mjs --remove             delete what this script created (ids in .gaemi-cloud.json)
-// It only creates resources under the name you choose and refuses a name already taken; it never changes account
-// settings, other Workers, DNS or login methods. Prerequisites the script can't do: a workers.dev subdomain and a
-// Zero Trust organization (free plan) chosen once in the dashboard. It checks both and says what to do.
+// It only creates resources under the name you choose and refuses a name already taken; it never changes other
+// Workers, DNS or login methods. A missing workers.dev subdomain it creates (after asking); the one thing it can't do
+// is turn on Zero Trust (choosing the free plan is a dashboard step): it checks and says what to do.
 import { spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { chmodSync, existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
@@ -18,14 +18,17 @@ import { fileURLToPath } from 'node:url'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const STATE = join(HERE, '.gaemi-cloud.json')  // ids of what was created (no secrets), for --remove
 export const API = 'https://api.cloudflare.com/client/v4'
-export const PERMISSIONS = [  // the token builder's names: start from the "Edit Cloudflare Workers" template and add the rest
-  'Account / Workers Scripts / Edit', 'Account / D1 / Edit', 'Account / Access: Apps and Policies / Edit',
-  'Account / Access: Service Tokens / Edit', 'Account / Access: Organizations, Identity Providers, and Groups / Read',
-  'Account / Account Settings / Read']
+// The token's permissions, prefilled through the dashboard's template URL (developers.cloudflare.com/fundamentals/
+// api/how-to/account-owned-token-template/): Zero Trust Edit covers Access apps, policies, service tokens and the
+// organization read.
+const KEYS = [['workers_scripts', 'edit'], ['d1', 'edit'], ['teams', 'edit'], ['account_settings', 'read']]
+export const PERMISSIONS = ['Workers Scripts / Edit', 'D1 / Edit', 'Zero Trust / Edit', 'Account Settings / Read']
+export const TOKEN_URL = 'https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=' +
+  encodeURIComponent(JSON.stringify(KEYS.map(([key, type]) => ({ key, type })))) + '&accountId=*&zoneId=all&name=gaemi-setup'
 
 // What each step needs, to say why a 403 happened (Cloudflare answers code 10000 for a missing permission)
-const NEEDS = { d1: 'D1 / Edit', scripts: 'Workers Scripts / Edit', access: 'Access: Apps and Policies / Edit',
-  tokens: 'Access: Service Tokens / Edit', org: 'Access: Organizations, Identity Providers, and Groups / Read' }
+const NEEDS = { d1: 'D1 / Edit', scripts: 'Workers Scripts / Edit', access: 'Zero Trust / Edit',
+  tokens: 'Zero Trust / Edit', org: 'Zero Trust / Edit' }
 
 export class CfError extends Error {}
 
@@ -52,12 +55,16 @@ export function client(token, fetchImpl = fetch) {
 }
 
 // Read-only checks first: what exists, and whether the account is ready. Returns what the plan needs.
-export async function inspect(api, accountId, name) {
-  const sub = (await api('GET', `/accounts/${accountId}/workers/subdomain`, undefined, 'scripts').catch(e => {
+export async function inspect(api, accountId, name, chooseSubdomain = async () => null) {
+  let sub = (await api('GET', `/accounts/${accountId}/workers/subdomain`, undefined, 'scripts').catch(e => {
     if (/권한/.test(e.message)) throw e
     return null  // no workers.dev subdomain chosen yet
   }))?.subdomain
-  if (!sub) throw new CfError('workers.dev 주소가 아직 없어요. 대시보드 > Workers & Pages에 한 번 들어가 workers.dev 이름을 정하세요')
+  if (!sub) {  // a new account: pick the <name>.workers.dev every Worker of the account lives under
+    const want = await chooseSubdomain()
+    if (!want) throw new CfError('workers.dev 주소가 아직 없어요. 대시보드 > Workers & Pages에 한 번 들어가 workers.dev 이름을 정하세요')
+    sub = (await api('PUT', `/accounts/${accountId}/workers/subdomain`, { subdomain: want }, 'scripts')).subdomain || want
+  }
   let org
   try {
     org = await api('GET', `/accounts/${accountId}/access/organizations`, undefined, 'org')
@@ -65,7 +72,7 @@ export async function inspect(api, accountId, name) {
     if (/권한/.test(e.message)) throw e
     org = null
   }
-  if (!org?.auth_domain) throw new CfError('Zero Trust가 아직 켜져 있지 않아요. 대시보드 > Zero Trust에서 팀 이름을 정하고 Free 플랜을 고르세요(카드 등록을 요구할 수 있지만 청구되지 않아요)')
+  if (!org?.auth_domain) throw new CfError('Zero Trust가 아직 켜져 있지 않아요. https://one.dash.cloudflare.com 에서 팀 이름을 정하고 Free 플랜을 고른 뒤 다시 실행하세요(카드 등록을 요구할 수 있지만 청구되지 않아요)')
   const scripts = await api('GET', `/accounts/${accountId}/workers/scripts`, undefined, 'scripts')
   if (scripts.some(s => s.id === name)) throw new CfError(`'${name}' 이름의 Worker가 이미 있어요. 덮어쓰지 않아요: 다른 이름을 고르세요`)
   const dbs = await api('GET', `/accounts/${accountId}/d1/database?name=${encodeURIComponent(name)}`, undefined, 'd1')
@@ -208,11 +215,18 @@ async function remove(api) {
   renameSync(STATE, `${STATE}.removed`)
 }
 
+function openBrowser(url) {  // best effort: the link is printed anyway
+  const cmd = process.platform === 'darwin' ? ['open', [url]] : process.platform === 'win32' ? ['cmd', ['/c', 'start', '', url]] : ['xdg-open', [url]]
+  try { spawnSync(cmd[0], cmd[1], { stdio: 'ignore', timeout: 5000 }) } catch {}
+}
+
 async function main(argv) {
   console.log('개미장부 폰 사본 설정 (Cloudflare 무료 플랜)\n')
-  console.log('Cloudflare API 토큰이 필요해요. 대시보드 > 내 프로필 > API 토큰 > 토큰 생성에서 "Edit Cloudflare Workers" 템플릿으로 시작해 다음 권한을 넣으세요:')
-  PERMISSIONS.forEach(p => console.log(`  - ${p}`))
-  console.log('이 토큰은 저장하지 않아요. 설정이 끝나면 대시보드에서 지워도 돼요.\n')
+  console.log('Cloudflare API 토큰이 필요해요. 아래 링크를 열면 필요한 권한이 미리 채워진 토큰 만들기 화면이 나와요.')
+  console.log('맨 아래 "요약 계속" > "토큰 생성"을 누르고, 나온 토큰을 복사해 여기에 붙여 넣으세요.\n')
+  console.log(`  ${TOKEN_URL}\n`)
+  console.log(`  (권한: ${PERMISSIONS.join(', ')}. 토큰은 저장하지 않아요. 끝나면 대시보드에서 지워도 돼요)\n`)
+  openBrowser(TOKEN_URL)
   const api = client(await ask('API 토큰 (입력해도 화면에 안 보여요): ', { hidden: true }))
   if (argv.includes('--remove')) return remove(api)
   if (existsSync(join(HERE, 'wrangler.toml'))) throw new CfError('이미 이 폴더에 폰 사본 설정(wrangler.toml)이 있어요. 새로 만들려면 그 파일을 다른 이름으로 옮긴 뒤 다시 실행하세요')
@@ -222,7 +236,11 @@ async function main(argv) {
   const email = await ask('폰에서 로그인할 이메일 (Cloudflare 계정 이메일): ')
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new CfError('이메일 형식이 아니에요')
   console.log('\n확인 중…')
-  const plan = await inspect(api, account.id, name)
+  const plan = await inspect(api, account.id, name, async () => {
+    const def = account.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'gaemi'
+    const sub = await ask(`이 계정은 workers.dev 주소가 아직 없어요. 쓸 이름 (모든 Worker 주소가 <이름>.workers.dev가 돼요, 기본 ${def}): `, { def })
+    return /^[a-z0-9][a-z0-9-]{0,62}$/.test(sub) ? sub : null
+  })
   console.log(`\n계정 '${account.name}'에 다음을 만들어요. 다른 Worker나 계정 설정은 건드리지 않아요.`)
   console.log(`  주소 https://${plan.domain}, D1 '${name}', 서비스 토큰 '${name}-pc', Access 앱 '${name}'(로그인 ${email})`)
   const print = argv.includes('--print'), env = envPath(argv)
