@@ -92,6 +92,12 @@ If Docker is available (any OS), this is the shortest path, and the user types e
 
 ## Step 7: phone copy on Cloudflare (optional)
 
+Prefer `cd cloud && node setup.mjs`: the user types a Cloudflare API token (permissions listed by the script and the
+README) and their login email; the script checks names are free, shows what it will create, asks, then creates D1,
+the service token, Access policies and app, deploys, sets PC_KEY, writes the four CLOUD_* values to the app's .env and
+verifies. It needs a workers.dev subdomain and a Zero Trust organization chosen once in the dashboard (it says so if
+missing). `node setup.mjs --remove` deletes what it made. The manual steps below remain for reference.
+
 Everything runs on the Cloudflare free plan.
 - Turning on Zero Trust for the first time may ask for a card even on the free plan. It isn't charged.
 - If the user refuses that, stop here: the local app works without the phone copy.

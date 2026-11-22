@@ -166,22 +166,37 @@ AI 코딩 도구(Claude Code, Codex, Cursor 등)를 쓰신다면 이 저장소�
 
 ## 폰에서 쓰기 (Cloudflare 무료 플랜)
 
-Cloudflare 계정만 있으면 됩니다. 결제는 필요 없지만, Zero Trust를 처음 켤 때 무료 플랜도 카드 등록을 요구할 수 있습니다(청구는 되지 않습니다). 아래 명령은 `cloud/`에서 실행합니다.
+장부가 있는 기기가 15분마다 화면 데이터를 Cloudflare Worker에 올리고, 폰은 그 Worker를 Cloudflare 계정 로그인으로 엽니다. 결제는 필요 없습니다.
 
-1. **준비**: `npm install && npx wrangler login`, 그리고 `cp wrangler.toml.example wrangler.toml`.
-2. **D1 만들기**: `npx wrangler d1 create assetlog`가 출력하는 `database_id`를 `wrangler.toml`에 넣고, `npx wrangler d1 execute assetlog --remote --file schema.sql`로 테이블을 만듭니다. 인증 오류(`code: 10000`)가 나면 `--file schema.sql` 대신 `--command "$(cat schema.sql)"`를 쓰세요.
-3. **PC 키**: `python3 -c 'import secrets; print(secrets.token_urlsafe(32))'`로 만든 값을 `npx wrangler secret put PC_KEY`와 `.env`의 `CLOUD_PC_KEY=`에 같이 넣습니다.
-4. **배포**: `npx wrangler deploy`. 출력되는 `https://assetlog.<내 서브도메인>.workers.dev`를 `.env`의 `CLOUD_URL=`에 넣습니다. 이 단계에서는 Access 설정 전이라 모든 요청이 503으로 막혀 있는 게 정상입니다.
-5. **Access 켜기**: 대시보드에서 이 Worker를 열고 `Access` 탭의 `Protect this Worker behind Access`를 누릅니다. 범위는 All traffic, 정책은 `Cloudflare account`(내 계정 멤버만), 세션은 1 month. **`Protect all Workers`는 누르지 마세요.** 계정의 다른 Worker까지 막힙니다. Email domain 정책도 쓰지 마세요(예: gmail.com을 넣으면 모든 Gmail 사용자가 들어옵니다).
-6. **PC용 서비스 토큰**: Zero Trust > Access controls > Service credentials > Service Tokens에서 토큰을 만들고, 화면의 `CF-Access-Client-Id: <값>`에서 **값만** `.env`의 `CF_ACCESS_CLIENT_ID=`, `CF_ACCESS_CLIENT_SECRET=`에 넣습니다. Secret은 한 번만 보입니다.
-7. **토큰 허용**: 이 Worker의 Access 애플리케이션(Zero Trust > Access controls > Applications)에 정책을 하나 더 추가합니다. Action은 `Service Auth`, Include는 위 서비스 토큰.
-8. **Access 값 넣기**: `wrangler.toml`의 `ACCESS_TEAM`과 `ACCESS_AUD`를 채웁니다. 서비스 토큰을 넣은 뒤 `CLOUD_URL`로 요청을 보내면 받는 `CF_Authorization` 쿠키(JWT)의 `iss`가 `https://<팀>.cloudflareaccess.com`, `aud`가 AUD 태그입니다. 다시 `npx wrangler deploy`.
-9. **연결 확인**: 프로젝트 폴더에서 `python3 -m assetlog cloud`가 성공하면 `./deploy/install.sh`를 다시 실행해 15분 타이머를 켭니다.
-10. **폰**: `CLOUD_URL`을 열고 Cloudflare 계정으로 로그인한 뒤 `홈 화면에 추가`. 로그인은 한 달 유지됩니다.
+**한 번만 대시보드에서 할 것** (자동화할 수 없는 계정 설정이라 직접 하셔야 합니다)
+1. Cloudflare에 가입하고 `Workers & Pages`에 한 번 들어가 workers.dev 이름을 정합니다.
+2. `Zero Trust`에 들어가 팀 이름을 정하고 Free 플랜을 고릅니다. 카드 등록을 요구할 수 있지만 청구되지 않습니다.
+3. `내 프로필 > API 토큰 > 토큰 생성`에서 **Edit Cloudflare Workers** 템플릿으로 시작해, 아래 권한을 더해 토큰을 만듭니다. 이 토큰은 설정할 때만 쓰고 어디에도 저장하지 않으며, 끝나면 지워도 됩니다.
+   - Account / D1 / Edit
+   - Account / Access: Apps and Policies / Edit
+   - Account / Access: Service Tokens / Edit
+   - Account / Access: Organizations, Identity Providers, and Groups / Read
 
-`cloud/`나 `assetlog/static/`을 고쳤다면 `npx wrangler deploy`로 다시 배포합니다. 무료 플랜 기준 사용량은 하루 요청·읽기·쓰기 모두 한도의 1% 안팎입니다.
+**나머지는 스크립트가 합니다** (Node.js 18 이상 필요)
 
-**걷어내기**: `systemctl --user disable --now assetlog-cloud.timer`, `.env`의 `CLOUD_URL=` 비우기, `cloud/`에서 `npx wrangler delete`와 `npx wrangler d1 delete assetlog`, 마지막으로 Zero Trust에서 Access 애플리케이션과 서비스 토큰 삭제.
+```bash
+cd cloud && node setup.mjs
+```
+
+토큰(입력해도 안 보임), Worker 이름, 폰에서 로그인할 이메일을 물은 뒤 아래를 순서대로 만들고, 만들기 전에 무엇을 만들지 보여 주고 확인을 받습니다.
+1. D1 데이터베이스와 테이블
+2. PC용 서비스 토큰과 PC 키. 만드는 즉시 앱의 `.env`(Docker는 `data/.env`)에 `CLOUD_URL`과 키 세 개를 저장합니다.
+3. Access 정책 두 개(내 이메일 로그인, 서비스 토큰)와, Worker 주소 전체를 덮는 Access 앱(세션 30일)
+4. `wrangler.toml` 작성과 Worker 배포, Worker에 PC 키 넣기
+5. 서비스 토큰으로 실제 접속해 연결 확인
+
+같은 이름의 Worker나 D1이 이미 있으면 덮어쓰지 않고 멈춥니다. 다른 Worker, DNS, 로그인 방법, 계정 설정은 건드리지 않습니다. 중간에 실패하면 이유(예: "API 토큰에 'D1 / Edit' 권한이 있는지 확인하세요")를 보여 주고, 그때까지 만든 것은 `node setup.mjs --remove`로 지울 수 있습니다.
+
+- 앱을 폰(Termux)에서 돌린다면 스크립트는 PC에서 한 번 실행하고, `node setup.mjs --print`로 키 네 줄을 화면에 받은 뒤 폰에서 `gaemi.sh setup`으로 넣으세요.
+- 끝나면 폰에서 Worker 주소를 열고 Cloudflare 계정으로 로그인한 뒤 `홈 화면에 추가`. 데이터는 15분 안에 올라옵니다. Docker나 `python3 -m assetlog run`이 아니라 systemd 타이머로 돌린다면 `./deploy/install.sh`를 다시 실행해 15분 타이머를 켭니다.
+- `cloud/`나 `assetlog/static/`을 고쳤다면 `cloud/`에서 `npx wrangler deploy`로 다시 배포합니다. 무료 플랜 기준 사용량은 하루 요청·읽기·쓰기 모두 한도의 1% 안팎입니다.
+- **걷어내기**: `cloud/`에서 `node setup.mjs --remove`(Worker, D1, Access 앱·정책, 서비스 토큰 삭제), 그리고 `.env`의 `CLOUD_URL=`을 비웁니다.
+- 손으로 하고 싶다면 `cloud/wrangler.toml.example` 맨 위의 주석에 단계가 있습니다.
 
 ## 계산 방식
 

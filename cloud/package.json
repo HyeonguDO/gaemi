@@ -4,8 +4,9 @@
   "scripts": {
     "dev": "wrangler dev --local --var DEV:1",
     "deploy": "wrangler deploy",
-    "test": "node test/smoke.mjs",
-    "pretest": "test -f wrangler.toml || cp wrangler.toml.example wrangler.toml"
+    "test": "node --test test/setup.test.mjs && node test/smoke.mjs",
+    "pretest": "test -f wrangler.toml || cp wrangler.toml.example wrangler.toml",
+    "setup": "node setup.mjs"
   },
   "devDependencies": {
     "wrangler": "^3"
