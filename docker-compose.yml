@@ -1,0 +1,12 @@
+# docker compose up -d --build   then open http://localhost:8000
+services:
+  gaemi:
+    build: .
+    image: gaemi
+    container_name: gaemi
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"  # files in ./data stay yours
+    ports:
+      - "127.0.0.1:8000:8000"  # this machine only. Never "8000:8000": the page has no login and holds your keys
+    volumes:
+      - ./data:/app/data

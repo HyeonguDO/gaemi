@@ -539,3 +539,19 @@ def test_kis_relay_error_is_transient_with_its_own_hint():
     assert sync.TRANSIENT.search(msg) and sync.TRANSIENT.search("ConnectionError: x")
     assert next(h for s, p, h in sync.HINTS if p.search(msg)).startswith("한국투자증권 서버의 일시 오류")
     assert not sync.TRANSIENT.search("toss: HTTP 403 access_denied")
+
+
+
+def test_setup_api_saves_without_ever_returning_values(client, monkeypatch):
+    secret = "Z" * 180
+    r = client.post("/api/setup", json={"values": {"KIS_APP_SECRET": secret}})
+    assert r.status_code == 200 and r.json()["saved"] == ["KIS_APP_SECRET"] and secret not in r.text
+    assert secret in config.ENV_FILE.read_text()
+    monkeypatch.setattr(config, "load", lambda *a, **k: {"KIS_APP_SECRET": secret})
+    st = client.get("/api/setup")
+    assert st.json()["set"]["kis"]["KIS_APP_SECRET"] is True and secret not in st.text
+    assert client.post("/api/setup", json={"values": {"KIS_CANO": "abc"}}).status_code == 400
+    assert client.post("/api/setup/check/nope").status_code == 422
+    # another site can't write keys: the Origin guard covers these routes too
+    assert client.post("/api/setup", json={"values": {"KIS_CANO": "12345678"}},
+                       headers={"Origin": "https://evil.example"}).status_code == 403

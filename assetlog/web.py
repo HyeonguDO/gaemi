@@ -32,7 +32,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import AfterValidator, BaseModel, Field, model_validator
 from starlette.concurrency import run_in_threadpool
 
-from . import classes, cloud, config, db, dcmodel, gold, infer, metrics, payers, principal
+from . import classes, cloud, config, db, dcmodel, gold, infer, metrics, payers, principal, setup
 from .__main__ import today
 
 log = logging.getLogger(__name__)
@@ -356,6 +356,45 @@ def _principal(conn, account_id):
         principal.rebuild(conn, account_id, today())
     elif account_id == gold.account(cfg):
         gold.rebuild(conn, cfg, account_id, today())
+
+
+class SetupIn(BaseModel):
+    values: dict[str, Annotated[str, Field(max_length=500)]]
+
+
+@app.get("/api/setup")
+def setup_status():
+    """Which settings are set (never their values), for the setup page."""
+    return {"set": setup.status(), "env_file": str(config.ENV_FILE)}
+
+
+@app.post("/api/setup")
+def setup_save(s: SetupIn):
+    try:
+        saved = setup.save(s.values)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    _held.clear()  # the next holdings read uses the new keys
+    return {"saved": saved, "set": setup.status()}
+
+
+@app.get("/api/setup/ip")
+def setup_ip():
+    try:
+        return {"ip": setup.public_ip()}
+    except RuntimeError as e:
+        raise HTTPException(502, str(e))
+
+
+@app.post("/api/setup/check/{service}")
+def setup_check(service: Literal["kis", "toss", "cloud"]):
+    return setup.check(service)
+
+
+@app.get("/api/setup/pc-key")
+def setup_pc_key():
+    """A fresh random PC key for the phone copy (shown once, for the user to also give the Worker)."""
+    return {"key": setup.new_pc_key()}
 
 
 FIRE = "fire.json"  # the FIRE tab's plan (ages, target, contributions, assumptions); the page simulates it

@@ -24,6 +24,17 @@ Walk the user through setup one step at a time, checking each step before the ne
 6. **Ask before anything outward-facing or irreversible.** That includes deploys, deleting Cloudflare resources, and `sudo`. Let the user run `sudo` commands themselves.
 7. **KIS token issuance sends the user a KakaoTalk alert and is limited to about one per minute.** Don't loop on calls that issue tokens. The app caches tokens in `data/tokens.json`.
 
+## Step 0: prefer Docker and the setup page
+
+If Docker is available (any OS), this is the shortest path, and the user types every secret into the page, not you:
+- Run `docker compose up -d --build` in the repo, then have the user open http://localhost:8000. With no broker set, the
+  page opens on 연결 설정: the server's public IP (for the Toss allowlist), one form per broker and for the phone copy,
+  and a live check after each save that says why it failed and what to do.
+- Keys are saved to `data/.env` (mode 600). Keep the port published on `127.0.0.1` only: the page has no login.
+- The container runs the daily sync and the 15-minute phone copy itself (`python -m assetlog run`): skip Steps 4-5's
+  timer and Step 3's `.env` editing. Then continue at "Step 4" only to read `docker compose logs`, and at Step 6-7.
+- Without Docker, `python3 -m assetlog run` gives the same page and schedule while it runs.
+
 ## Step 1: check the machine
 
 - Linux with systemd user services (`systemctl --user`), Python 3.10+, and `pip`.

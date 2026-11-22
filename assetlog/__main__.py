@@ -1,4 +1,4 @@
-"""python -m assetlog serve [--host 127.0.0.1] [--port 8000] | sync | cloud | probe {kb,kis,toss} | demo | backfill-fx"""
+"""python -m assetlog serve|run [--host 127.0.0.1] [--port 8000] | sync | cloud | probe {kb,kis,toss} | demo | backfill-fx"""
 import argparse
 import json
 import logging
@@ -17,6 +17,9 @@ def main():
     s = sub.add_parser("serve")
     s.add_argument("--host", default="127.0.0.1")  # this PC only; the phone uses the Cloudflare Worker (cloud/)
     s.add_argument("--port", type=int, default=8000)
+    r = sub.add_parser("run", help="serve, plus the daily sync and the 15-minute phone copy in the same process (Docker)")
+    r.add_argument("--host", default="127.0.0.1")
+    r.add_argument("--port", type=int, default=8000)
     sub.add_parser("sync", help="pull balances and transactions from configured brokers")
     sub.add_parser("cloud", help="apply the phone's writes queued in the Worker, then push the app's data to it")
     pr = sub.add_parser("probe", help="print raw API responses (secrets redacted) to check field mappings")
@@ -29,6 +32,9 @@ def main():
     if args.cmd == "serve":
         import uvicorn
         uvicorn.run("assetlog.web:app", host=args.host, port=args.port, proxy_headers=False)  # web.py: the peer address
+    elif args.cmd == "run":
+        from . import scheduler
+        scheduler.run(args.host, args.port)
     elif args.cmd == "demo":
         from . import demo
         demo.main()

@@ -9,3 +9,4 @@ def _no_real_data_or_keys(tmp_path, monkeypatch):
     a sync through the app call live broker APIs)."""
     monkeypatch.setattr(config, "DATA", tmp_path / "data")
     monkeypatch.setattr(config, "load", lambda *a, **k: {})
+    monkeypatch.setattr(config, "ENV_FILE", tmp_path / ".env")  # the setup page's writes never reach the real .env

@@ -288,7 +288,8 @@ try {
       assert.deepEqual(r.json(), { detail: '파일이 커서 클라우드로는 못 올려요. PC에서 올려 주세요' })
       for (const [m, p] of [['GET', '/api/nope'], ['PUT', '/api/transactions'], ['POST', '/api/transactions/abc'],
         ['POST', '/api/login'], ['POST', '/api/logout'], ['GET', '/api/transactions/3'], ['POST', '/api/meta'],
-        ['PATCH', '/api/snapshots'], ['POST', '/api/import/formats']]) {
+        ['PATCH', '/api/snapshots'], ['POST', '/api/import/formats'], ['GET', '/api/setup'], ['POST', '/api/setup'],
+        ['POST', '/api/setup/check/kis'], ['GET', '/api/setup/ip']]) {
         const r = await send(m, p, '{}')
         assert.equal(r.status, 404, `${m} ${p}`)
         assert.deepEqual(r.json(), { detail: 'Not Found' })

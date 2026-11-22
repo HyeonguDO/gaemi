@@ -7,10 +7,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
+ENV_FILE = Path(os.environ.get("ASSETLOG_ENV_FILE") or ROOT / ".env")  # Docker keeps it in the data volume
 
 
-def load(path=ROOT / ".env"):
+def load(path=None):
     cfg = {}
+    path = path or ENV_FILE
     if Path(path).exists():
         for line in Path(path).read_text(encoding="utf-8").splitlines():
             line = line.strip()

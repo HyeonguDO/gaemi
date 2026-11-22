@@ -53,28 +53,40 @@ python3 -m assetlog demo                              # 데모 장부 data/demo.
 ASSETLOG_DB=data/demo.db python3 -m assetlog serve    # http://127.0.0.1:8000
 ```
 
-## 설치
+## 설치 (Docker, 권장)
 
-AI 코딩 도구(Claude Code, Codex, Cursor 등)를 쓰신다면 이 저장소에서 **"개미장부 셋업해 줘"** 라고 하면 됩니다. Claude Code는 `.claude/skills/gaemi-setup/`, 다른 도구는 `AGENTS.md`를 읽고 아래 순서를 같이 진행합니다. API 키는 채팅에 붙여 넣지 말고 `.env`에 직접 넣으세요.
+윈도우·맥·리눅스 어디서든 [Docker](https://docs.docker.com/get-docker/)만 있으면 됩니다. 화면, 매일 23:50 동기화, 15분마다 폰 사본 올리기가 컨테이너 하나에서 돕니다. 장부와 키는 모두 `data/` 폴더에 남습니다.
 
-직접 하실 때의 순서입니다.
+```bash
+git clone https://github.com/HyeonguDO/gaemi.git && cd gaemi
+docker compose up -d --build
+```
 
-1. **준비**: Linux(systemd), Python 3.10 이상, (폰에서 쓰려면) Node.js 18 이상. 토스 PDF를 가져오려면 `pdftotext`(poppler)가 필요합니다.
+브라우저로 **http://localhost:8000** 을 열면 **연결 설정** 화면이 먼저 나옵니다. 키를 채팅이나 파일에 직접 쓸 필요 없이 여기서 넣으면 됩니다.
+
+1. **이 서버의 공인 IP**가 맨 위에 나옵니다. 토스증권처럼 허용 IP를 쓰는 증권사에 이 주소를 등록하세요.
+2. 증권사별로 키를 넣고 **저장하고 연결 확인**을 누르면, 그 자리에서 실제로 조회해 보고 성공(총자산)인지, 실패라면 이유와 해결 방법(예: "이 서버의 IP가 토스에 등록돼 있지 않아요")을 보여 줍니다.
+   - **한국투자증권**: [KIS Developers](https://apiportal.koreainvestment.com)에서 신청. 계좌번호 앞 8자리와 상품코드(위탁 `01`)도 넣습니다. 1년마다 연장해야 하고, 토큰 발급 때 카카오톡 알림이 오는 건 정상입니다.
+   - **토스증권**: 토스증권 PC 웹(WTS)의 `설정 > Open API`에서 발급하고, 위의 공인 IP를 허용 IP로 등록합니다.
+   - **KB증권(실험적)**: 화면에는 없습니다. 쓰려면 `data/.env`에 직접 넣으세요(`.env.example` 참고).
+3. `입력` 탭에서 각 계좌의 지난해 말 평가액을 넣어야 올해 수익률이 나옵니다(잔고증명서에서 확인).
+
+알아 둘 점:
+- 넣은 값은 `data/.env`(권한 600)에만 저장되고 화면에 다시 보여 주지 않습니다.
+- 화면에는 로그인이 없으므로, `docker-compose.yml`의 포트는 꼭 `127.0.0.1:8000:8000`(이 기기에서만)으로 두세요.
+- 컨테이너가 꺼져 있던 동안 놓친 23:50 동기화는 다시 켜질 때 바로 돕니다. 늘 켜 두려면 NAS나 늘 켜진 PC에서 돌리세요.
+- 업데이트: `git pull && docker compose up -d --build`. 기록 보기: `docker compose logs -f`.
+
+## 설치 (Docker 없이)
+
+AI 코딩 도구(Claude Code, Codex, Cursor 등)를 쓰신다면 이 저장소에서 **"개미장부 셋업해 줘"** 라고 하면 됩니다. Claude Code는 `.claude/skills/gaemi-setup/`, 다른 도구는 `AGENTS.md`를 읽고 아래 순서를 같이 진행합니다. API 키는 채팅에 붙여 넣지 마세요.
+
+1. **준비**: Python 3.10 이상, (폰에서 쓰려면) Node.js 18 이상. 토스 PDF를 가져오려면 `pdftotext`(poppler)가 필요합니다.
    ```bash
    pip install -r requirements.txt
-   cp .env.example .env && chmod 600 .env
    ```
-2. **API 키 발급** 후 `.env`에 넣기
-   - **한국투자증권**: [KIS Developers](https://apiportal.koreainvestment.com)에서 신청합니다. `KIS_CANO`는 종합계좌번호 앞 8자리, `KIS_ACNT_PRDT_CD`는 상품코드(위탁 `01`)입니다. 이용 기간이 1년이라 매년 연장해야 합니다. 토큰을 발급할 때마다 카카오톡 알림이 오는데, 하루 한 번은 정상입니다.
-   - **토스증권**: 토스증권 PC 웹(WTS)의 `설정 > Open API`에서 발급하고, **이 PC의 공인 IP를 허용 IP로 등록**해야 합니다. 등록하지 않은 네트워크에서는 토스만 실패하고, 화면에 알림이 뜹니다.
-   - **KB증권(실험적)**: KB증권 홈페이지 `고객서비스 > Open API`에서 신청합니다.
-3. **확인**: `python3 -m assetlog probe kis` (또는 `toss`)로 API 응답을 확인하고, `python3 -m assetlog sync`로 첫 동기화를 합니다.
-4. **화면 보기**: `python3 -m assetlog serve` 후 `http://127.0.0.1:8000`. 이 PC에서만 열리고 로그인은 없습니다.
-5. **기준값 입력**: `입력` 탭에서 각 계좌의 지난해 말 평가액을 넣어야 올해 수익률이 나옵니다. 잔고증명서(토스 앱 증명서 발급, 한투 홈페이지)에서 확인할 수 있습니다.
-6. **매일 자동 동기화**: `deploy/install.sh`가 매일 23:50 동기화 타이머를 설치합니다. 로그인하지 않아도 돌게 하려면 `sudo loginctl enable-linger $USER`를 한 번 실행하세요.
-   ```bash
-   ./deploy/install.sh
-   ```
+2. **실행**: `python3 -m assetlog run` 후 `http://127.0.0.1:8000`. 위 Docker와 같은 연결 설정 화면이 나오고, 이 프로세스가 켜져 있는 동안 동기화와 폰 사본 올리기도 합니다. 키는 저장소의 `.env`에 저장됩니다.
+3. **리눅스에서 매일 자동으로**(선택): 화면 없이 타이머로만 돌리려면 `deploy/install.sh`가 매일 23:50 동기화 타이머를 설치합니다. 로그인하지 않아도 돌게 하려면 `sudo loginctl enable-linger $USER`를 한 번 실행하세요. 이때는 `python3 -m assetlog serve`로 화면만 띄웁니다.
 
 ### 선택 기능
 
@@ -205,6 +217,8 @@ python3 -m pytest -q               # 테스트 (cloud/ 에서는 npm test)
 | `assetlog/dcmodel.py`, `principal.py`, `gold.py` | DC 퇴직연금 모델, 예금·적금, 금현물 |
 | `assetlog/importers.py` | 한투 엑셀, 토스 PDF, CSV 가져오기 |
 | `assetlog/web.py`, `static/` | JSON API와 단일 파일 화면 (PWA) |
+| `assetlog/setup.py`, `scheduler.py` | 연결 설정 화면의 저장·연결 확인·실패 이유, `run` 명령의 동기화·폰 사본 예약 |
+| `Dockerfile`, `docker-compose.yml` | 컨테이너 하나로 실행 |
 | `static/index.html`의 `fire:begin`~`fire:end` | FIRE 시뮬레이션 계산 (화면 안에서 실행, `tests/test_fire.py`가 node로 검사) |
 | `assetlog/cloud.py`, `cloud/` | PC ↔ Cloudflare Worker 주고받기, Worker 코드 |
 | `deploy/` | systemd 사용자 타이머와 설치 스크립트. `deploy/termux/`: 안드로이드 폰용 cron 실행·설치·백업 스크립트, `deploy/phone.sh`: PC에서 폰에 적용·백업 |

@@ -197,6 +197,14 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .fire-goal { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--sub); }
 .fire-pill { flex: none; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
 .fire-pill.ok { background: var(--mint-bg); color: var(--mint); } .fire-pill.no { background: var(--up-soft); color: var(--up); }
+.fire-pill.idle { background: var(--field); color: var(--sub); }
+.setup-ip { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.setup-ip b { font-size: 24px; font-weight: 800; letter-spacing: -.01em; }
+.setup-out { margin-top: 14px; padding: 12px 14px; border-radius: 12px; font-size: 14px; line-height: 1.55; }
+.setup-out p { margin-top: 4px; }
+.setup-out.ok { background: var(--mint-bg); color: var(--mint); }
+.setup-out.bad { background: var(--up-soft); color: var(--up); }
+.setup-out details { color: var(--sub); }
 .fire-bar { height: 8px; margin-top: 10px; border-radius: 999px; background: var(--field); overflow: hidden; }
 .fire-bar i { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
 .fire-opt { padding: 12px 0; border-bottom: 1px solid var(--line); } .fire-opt:last-child { border-bottom: 0; }
@@ -321,6 +329,7 @@ details.fire-fold > summary { font-size: 15px; font-weight: 700; padding: 0; }
 
   <section id="tab-input" class="tab" hidden>
     <h1>입력</h1>
+    <button type="button" class="pill" data-go="setup" id="setup-link" hidden>증권사·폰 연결 설정<span aria-hidden="true">›</span></button>
     <div class="card">
       <h2>증권사 동기화</h2>
       <p class="hint">.env에 설정한 증권사 API로 잔고와 거래내역을 가져와요.</p>
@@ -400,6 +409,19 @@ details.fire-fold > summary { font-size: 15px; font-weight: 700; padding: 0; }
       <p class="hint">이 기기에 저장해 둔 화면도 함께 지워요.</p>
       <button type="button" class="btn" id="logout-btn">로그아웃</button>
     </div>
+  </section>
+
+  <section id="tab-setup" class="tab" hidden>
+    <h1>연결 설정</h1>
+    <p class="hint" style="margin:8px 2px 0">증권사 키와 폰 연결을 넣는 곳이에요. 넣은 값은 이 기기에만 저장되고, 화면에 다시 보여 주지 않아요. 값을 넣고 <b>저장하고 연결 확인</b>을 누르면 바로 실제로 조회해 보고 결과를 알려 드려요.</p>
+    <div class="card">
+      <h2>이 서버의 공인 IP</h2>
+      <div class="setup-ip"><b class="num" id="setup-ip-value">…</b>
+        <span><button type="button" class="sbtn" id="setup-ip-copy">복사</button> <button type="button" class="sbtn" id="setup-ip-refresh">다시 확인</button></span></div>
+      <p class="hint">이 앱을 돌리는 기기(PC든 폰이든)가 증권사로 나가는 주소예요. 토스증권처럼 허용 IP를 쓰는 곳에 이 주소를 등록하세요. 집 인터넷 주소는 가끔 바뀌니, 토스 연결이 갑자기 실패하면 여기서 다시 확인하세요.</p>
+    </div>
+    <div id="setup-forms"></div>
+    <p class="hint" id="setup-env" style="margin:12px 2px 0"></p>
   </section>
 
   <section id="tab-fire" class="tab" hidden>
@@ -528,6 +550,7 @@ async function loadMeta() {
     $('#sync-btn').textContent = '동기화 요청';
     $('#hd-refresh').disabled = true; $('#hd-hint').hidden = false;  // holdings are what the PC pushed
     $('#logout-card').hidden = false;  // ends the Access session; the PC app has no login
+    $('#setup-link').hidden = true;  // keys are entered on the device that runs the sync
   }
   // each failed op is shown once: the newest id shown is kept per device, and in state for this page
   let seen = 0;
@@ -1660,9 +1683,102 @@ onSubmit('#f-fire', async () => {
   done(await api('/api/fire', { method: 'POST', body: JSON.stringify(plan) }), '저장했어요');
 });
 
+
+// setup: keys go to .env through /api/setup (this PC only; the Worker has no such route). Values are never shown back.
+const SETUP = {
+  kis: { title: '한국투자증권', wait: '확인 중… (몇 초 걸려요)',
+    help: '<a href="https://apiportal.koreainvestment.com" target="_blank" rel="noopener">KIS Developers</a>에서 Open API를 신청하고 앱을 만들면 앱키와 앱시크릿이 나와요. 신청은 1년마다 연장해야 해요. 처음 확인할 때 카카오톡으로 토큰 발급 알림이 오는데, 정상이에요.',
+    fields: [['KIS_APP_KEY', '앱키'], ['KIS_APP_SECRET', '앱시크릿'], ['KIS_CANO', '계좌번호 앞 8자리', '12345678', 'numeric'],
+      ['KIS_ACNT_PRDT_CD', '상품코드 (위탁계좌는 01)', '01', 'numeric']] },
+  toss: { title: '토스증권', wait: '확인 중… (토스는 10초쯤 걸려요)',
+    help: '토스증권 PC 웹(WTS)의 설정 > Open API에서 발급해요. 위의 공인 IP를 같은 화면의 <b>허용 IP 관리</b>에 먼저 등록하세요.',
+    fields: [['TOSS_CLIENT_ID', 'Client ID'], ['TOSS_CLIENT_SECRET', 'Client Secret']] },
+  cloud: { title: '폰에서 보기 (선택)', wait: '확인 중…',
+    help: 'README의 <b>폰에서 쓰기</b>대로 Cloudflare Worker를 만든 뒤 넣어요. 안 써도 이 기기에서는 다 돼요.',
+    fields: [['CLOUD_URL', 'Worker 주소', 'https://assetlog.내이름.workers.dev', 'url'], ['CF_ACCESS_CLIENT_ID', '서비스 토큰 Client ID'],
+      ['CF_ACCESS_CLIENT_SECRET', '서비스 토큰 Client Secret'], ['CLOUD_PC_KEY', 'PC 키']] },
+};
+const SECRET = new Set(['KIS_APP_KEY', 'KIS_APP_SECRET', 'TOSS_CLIENT_SECRET', 'CF_ACCESS_CLIENT_SECRET', 'CLOUD_PC_KEY']);
+
+function setupPill(svc) {
+  const r = state.setupResult?.[svc], set = Object.values(state.setup?.set?.[svc] || {});
+  return r ? (r.ok ? '<span class="fire-pill ok">연결됨</span>' : '<span class="fire-pill no">실패</span>')
+    : set.every(Boolean) ? '<span class="fire-pill idle">설정됨 · 확인 전</span>'
+    : set.some(Boolean) ? '<span class="fire-pill no">덜 넣음</span>' : '<span class="fire-pill idle">미설정</span>';
+}
+
+function setupResult(r) {
+  if (!r) return '';
+  if (r.busy) return `<p class="hint">${esc(r.busy)}</p>`;
+  return r.ok ? `<div class="setup-out ok"><b>성공</b><p>${esc(r.summary)}</p></div>`
+    : `<div class="setup-out bad"><b>실패: ${esc(r.why)}</b><p>해결: ${esc(r.fix)}</p>
+       ${r.error ? `<details><summary>오류 원문</summary><pre>${esc(r.error)}</pre></details>` : ''}</div>`;
+}
+
+function renderSetup() {
+  const st = state.setup;
+  $('#setup-env').textContent = st ? `저장 위치: ${st.env_file}` : '';
+  $('#setup-forms').innerHTML = Object.entries(SETUP).map(([svc, s]) => `<form class="card setup-svc" data-svc="${svc}">
+    <div class="card-head"><h2>${s.title}</h2>${setupPill(svc)}</div>
+    <p class="hint">${s.help}</p>
+    ${s.fields.map(([k, label, eg, mode]) => {
+      const set = st?.set?.[svc]?.[k];
+      return `<label>${label}<input name="${k}" ${SECRET.has(k) ? 'type="password"' : `inputmode="${mode || 'text'}"`}
+        autocomplete="off" spellcheck="false" placeholder="${set ? '설정됨 · 바꿀 때만 입력' : esc(eg || '')}"></label>`;
+    }).join('')}
+    ${svc === 'cloud' ? '<button type="button" class="sbtn" id="setup-pckey" style="margin-top:10px">PC 키 새로 만들기</button>' : ''}
+    <button class="btn">저장하고 연결 확인</button>
+    <div data-out="${svc}">${setupResult(state.setupResult?.[svc])}</div>
+  </form>`).join('');
+}
+
+async function loadSetup() {
+  try { state.setup = await api('/api/setup'); } catch (e) { $('#setup-forms').innerHTML = `<div class="card hint">${esc(e.message)}</div>`; return; }
+  renderSetup();
+  setupIp();
+}
+
+async function setupIp() {
+  const el = $('#setup-ip-value');
+  el.textContent = '확인 중…';
+  try { el.textContent = (await api('/api/setup/ip')).ip; } catch (e) { el.textContent = '알 수 없음'; toast(e.message); }
+}
+
+$('#setup-ip-copy').onclick = () => {
+  const ip = $('#setup-ip-value').textContent;
+  navigator.clipboard?.writeText(ip).then(() => toast('복사했어요'), () => toast('복사하지 못했어요. 직접 선택해 주세요'));
+};
+$('#setup-ip-refresh').onclick = setupIp;
+
+$('#tab-setup').addEventListener('submit', async e => {
+  const f = e.target.closest('.setup-svc');
+  if (!f) return;
+  e.preventDefault();
+  const svc = f.dataset.svc, btn = $('button.btn', f), values = {};
+  f.querySelectorAll('input[name]').forEach(i => { if (i.value.trim()) values[i.name] = i.value.trim(); });
+  btn.disabled = true;
+  state.setupResult = { ...state.setupResult, [svc]: { busy: SETUP[svc].wait } };
+  $(`[data-out="${svc}"]`, f).innerHTML = setupResult(state.setupResult[svc]);
+  try {
+    if (Object.keys(values).length) state.setup.set = (await api('/api/setup', { method: 'POST', body: JSON.stringify({ values }) })).set;
+    state.setupResult[svc] = await api(`/api/setup/check/${svc}`, { method: 'POST' });
+  } catch (err) {  // a value the server refused: nothing was saved
+    state.setupResult[svc] = { ok: false, why: err.message, fix: '값을 고쳐서 다시 넣으세요', error: '' };
+  }
+  renderSetup();
+});
+$('#tab-setup').addEventListener('click', async e => {
+  if (!e.target.closest('#setup-pckey')) return;
+  const input = $('#tab-setup input[name=CLOUD_PC_KEY]');
+  input.type = 'text';
+  input.value = (await api('/api/setup/pc-key')).key;
+  toast('새 PC 키를 만들었어요. 저장하기 전에 Worker에도 같은 값을 넣으세요');
+});
+
 // tabs
 function show(tab) {
-  if (!['home', 'holdings', 'review', 'fire', 'input'].includes(tab)) tab = 'home';
+  if (!['home', 'holdings', 'review', 'fire', 'input', 'setup'].includes(tab)) tab = 'home';
+  if (tab === 'setup' && state.cloud) tab = 'input';  // keys are entered on the device that runs the sync
   document.querySelectorAll('.tab').forEach(s => s.hidden = s.id !== 'tab-' + tab);
   document.querySelectorAll('.tabbar button').forEach(b => b.setAttribute('aria-current', b.dataset.go === tab ? 'page' : 'false'));
   // cloud mode: what the Worker serves changes only with the PC's next push (every 15 min), so a revisit keeps what
@@ -1671,6 +1787,7 @@ function show(tab) {
   if (tab === 'holdings' && !(keep && state.holdings)) loadHoldings();
   if (tab === 'review' && !(keep && state.review)) loadReview();
   if (tab === 'fire') loadFire();
+  if (tab === 'setup') loadSetup();
   if (tab === 'input') { loadFormats(); if (!(keep && state.snaps)) loadSnaps(); }
   history.replaceState(null, '', '#' + tab);
   scrollTo(0, 0);
@@ -1679,7 +1796,17 @@ document.addEventListener('click', e => { const g = e.target.closest('[data-go]'
 // the mode is known before a tab loads, but an unreachable PC must not hold the first tab forever: race meta
 // against 1s once load() (which sw.js answers from its saved copy) is in; a saved cloud meta still answers by then.
 const meta0 = loadMeta();
-load().then(() => Promise.race([meta0, new Promise(r => setTimeout(r, 1000))])).then(() => show(location.hash.slice(1)));
+load().then(() => Promise.race([meta0, new Promise(r => setTimeout(r, 1000))])).then(async () => {
+  let tab = location.hash.slice(1);
+  if (!state.cloud) {  // this device runs the sync: offer setup, and open it first while no broker is set
+    $('#setup-link').hidden = false;
+    try {
+      const st = state.setup = await api('/api/setup');
+      if (!tab && !['kis', 'toss'].some(s => Object.values(st.set[s]).some(Boolean))) tab = 'setup';
+    } catch {}
+  }
+  show(tab);
+});
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});  // needs https (the Worker) or localhost
 </script>
 </body>
