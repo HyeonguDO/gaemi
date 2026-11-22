@@ -55,12 +55,14 @@ ASSETLOG_DB=data/demo.db python3 -m assetlog serve    # http://127.0.0.1:8000
 
 ## 설치 (Docker, 권장)
 
-윈도우·맥·리눅스 어디서든 [Docker](https://docs.docker.com/get-docker/)만 있으면 됩니다. 화면, 매일 23:50 동기화, 15분마다 폰 사본 올리기가 컨테이너 하나에서 돕니다. 장부와 키는 모두 `data/` 폴더에 남습니다.
+윈도우·맥·리눅스 어디서든 [Docker](https://docs.docker.com/get-docker/)(Engine 28 이상)만 있으면 됩니다. 화면, 매일 23:50 동기화, 15분마다 폰 사본 올리기가 컨테이너 하나에서 돕니다. 장부와 키는 모두 `data/` 폴더에 남습니다.
 
 ```bash
 git clone https://github.com/HyeonguDO/gaemi.git && cd gaemi
 docker compose up -d --build
 ```
+
+리눅스에서 내 사용자 번호가 1000이 아니면(`id -u`로 확인) `GAEMI_UID=$(id -u) GAEMI_GID=$(id -g) docker compose up -d --build`로 실행하세요. 그래야 `data/`의 파일이 내 것이 됩니다.
 
 브라우저로 **http://localhost:8000** 을 열면 **연결 설정** 화면이 먼저 나옵니다. 키를 채팅이나 파일에 직접 쓸 필요 없이 여기서 넣으면 됩니다.
 
@@ -73,8 +75,10 @@ docker compose up -d --build
 
 알아 둘 점:
 - 넣은 값은 `data/.env`(권한 600)에만 저장되고 화면에 다시 보여 주지 않습니다.
-- 화면에는 로그인이 없으므로, `docker-compose.yml`의 포트는 꼭 `127.0.0.1:8000:8000`(이 기기에서만)으로 두세요.
+- 화면에는 로그인이 없으므로, `docker-compose.yml`의 포트는 꼭 `127.0.0.1:8000:8000`(이 기기에서만)으로 두세요. Docker 안에서는 앱이 접속한 기기의 주소를 제대로 볼 수 없어서, 포트를 `8000:8000`으로 열면 같은 와이파이의 다른 기기도 키를 바꾸거나 장부를 볼 수 있게 됩니다. NAS에서 돌리고 다른 기기로 보고 싶다면 포트를 열지 말고 '폰에서 쓰기'(Cloudflare)를 쓰세요.
+- 같은 기기의 다른 프로그램은 이 화면에 접근할 수 있습니다. 그래서 Worker 주소를 바꿀 때는 Cloudflare 키도 함께 다시 넣어야만 저장되게 해 두었습니다(저장된 키가 엉뚱한 서버로 가지 않게).
 - 컨테이너가 꺼져 있던 동안 놓친 23:50 동기화는 다시 켜질 때 바로 돕니다. 늘 켜 두려면 NAS나 늘 켜진 PC에서 돌리세요.
+- 브라우저 대신 터미널로 넣으려면: `docker compose exec gaemi python -m assetlog setup` (같은 확인과 실패 이유를 보여 줍니다).
 - 업데이트: `git pull && docker compose up -d --build`. 기록 보기: `docker compose logs -f`.
 
 ## 설치 (Docker 없이)
@@ -149,7 +153,7 @@ AI 코딩 도구(Claude Code, Codex, Cursor 등)를 쓰신다면 이 저장소�
    proot-distro install debian
    proot-distro login debian -- bash -c "apt-get update && apt-get install -y python3 python3-venv git ca-certificates tzdata && git clone https://github.com/HyeonguDO/gaemi.git /root/assetlog && python3 -m venv /root/venv && /root/venv/bin/pip install -r /root/assetlog/requirements.txt"
    ```
-3. PC의 `.env`와 `data/`를 폰의 데비안 안 `/root/assetlog/`로 옮깁니다. 같은 와이파이에서 SSH(`sshd`, 포트 8022)로 보내면 인터넷을 거치지 않습니다. Termux 쪽 실제 위치는 proot-distro 버전에 따라 `$PREFIX/var/lib/proot-distro/containers/debian/rootfs/root/assetlog` 또는 `.../installed-rootfs/debian/root/assetlog`입니다.
+3. 키 넣기: 처음 쓰는 거라면 Termux에서 `sh $PREFIX/var/lib/proot-distro/containers/debian/rootfs/root/assetlog/deploy/termux/gaemi.sh setup`을 실행하면, 공인 IP를 알려 주고 증권사 키를 하나씩 물어본 뒤 바로 연결을 확인해 실패 이유까지 보여 줍니다(비밀 값은 입력해도 안 보임). PC에서 쓰던 걸 옮기는 거라면 PC의 `.env`와 `data/`를 폰의 데비안 안 `/root/assetlog/`로 옮깁니다. 같은 와이파이에서 SSH(`sshd`, 포트 8022)로 보내면 인터넷을 거치지 않습니다. Termux 쪽 실제 위치는 proot-distro 버전에 따라 `$PREFIX/var/lib/proot-distro/containers/debian/rootfs/root/assetlog` 또는 `.../installed-rootfs/debian/root/assetlog`입니다.
 4. Termux에서 `pkg install -y termux-api` 후 `sh $PREFIX/var/lib/proot-distro/containers/debian/rootfs/root/assetlog/deploy/termux/install.sh`를 실행합니다. 매일 23:50 동기화와 15분마다 폰 사본 올리기를 cron에 등록하고, 폰을 다시 켜도 이어서 돌도록 부팅 스크립트를 넣습니다. 또 안드로이드 작업 예약(JobScheduler)에 15분 간격의 감시 작업을 등록합니다. 안드로이드가 Termux의 프로그램을 정리해도 이 작업이 cron과 SSH를 되살리고, 놓친 23:50 동기화를 바로 돌립니다. 실행 기록은 Termux 홈의 `gaemi-sync.log`, `gaemi-cloud.log`, `gaemi-tick.log`(되살린 기록)에 남습니다.
 5. 폰 설정: 배터리에서 Termux를 '제한 없음'으로 두고 '절전 예외 앱'에 넣고, 삼성이면 디바이스 케어의 '자동 최적화'를 끄고(새벽에 백그라운드 앱을 닫습니다), 개발자 옵션의 '하위 프로세스 제한 사용 안 함'을 켜고, 충전기에 계속 꽂아 둘 테니 '배터리 보호'(최대 85%)를 켜고, 화면 잠금을 걸어 두세요. 키가 이 폰에 있습니다. 이 폰으로 다른 앱을 깔거나 웹을 보지 않는 게 안전합니다.
 

@@ -1,7 +1,8 @@
-"""python -m assetlog serve|run [--host 127.0.0.1] [--port 8000] | sync | cloud | probe {kb,kis,toss} | demo | backfill-fx"""
+"""python -m assetlog serve|run [--host 127.0.0.1] [--port 8000] | setup | sync | cloud | probe {kb,kis,toss} | demo | backfill-fx"""
 import argparse
 import json
 import logging
+import os
 import sys
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -20,6 +21,7 @@ def main():
     r = sub.add_parser("run", help="serve, plus the daily sync and the 15-minute phone copy in the same process (Docker)")
     r.add_argument("--host", default="127.0.0.1")
     r.add_argument("--port", type=int, default=8000)
+    sub.add_parser("setup", help="enter and check the broker keys and the phone copy in the terminal")
     sub.add_parser("sync", help="pull balances and transactions from configured brokers")
     sub.add_parser("cloud", help="apply the phone's writes queued in the Worker, then push the app's data to it")
     pr = sub.add_parser("probe", help="print raw API responses (secrets redacted) to check field mappings")
@@ -28,10 +30,17 @@ def main():
     sub.add_parser("backfill-fx", help="one-off, no API calls: past USD rates and snapshots.rate from the ledger")
     args = p.parse_args()
     logging.basicConfig(level=logging.INFO)
+    os.umask(0o077)  # the ledger, tokens and .env this process creates are the owner's alone
 
     if args.cmd == "serve":
         import uvicorn
         uvicorn.run("assetlog.web:app", host=args.host, port=args.port, proxy_headers=False)  # web.py: the peer address
+    elif args.cmd == "setup":
+        from . import setup_cli
+        try:
+            setup_cli.wizard()
+        except (EOFError, KeyboardInterrupt):  # Ctrl+D / Ctrl+C: what was saved so far stays
+            print("\n중단했어요. 그때까지 저장한 값은 남아 있어요.")
     elif args.cmd == "run":
         from . import scheduler
         scheduler.run(args.host, args.port)

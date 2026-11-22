@@ -9,8 +9,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY assetlog ./assetlog
+USER 1000:1000
 VOLUME /app/data
 EXPOSE 8000
 HEALTHCHECK --interval=5m --timeout=10s CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/manifest.webmanifest')"
-# 0.0.0.0 inside the container only: compose publishes the port on 127.0.0.1, so nothing outside this machine reaches it
+# 0.0.0.0 inside the container only: compose publishes the port on 127.0.0.1, so nothing outside this machine reaches it.
+# Behind Docker's port publishing the app sees most clients as the bridge gateway, so its own check of the client's
+# address can't tell them apart: the 127.0.0.1 publish is the boundary (Docker Engine 28+ keeps LAN neighbours off it).
 CMD ["python", "-m", "assetlog", "run", "--host", "0.0.0.0"]

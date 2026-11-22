@@ -87,3 +87,51 @@ def test_scheduler_runs_a_missed_sync_and_the_phone_copy(monkeypatch):
     clouds = [c[1].strftime("%H:%M") for c in calls if c[0] == "cloud"]
     assert syncs == ["21:00", "21:10"]  # the missed sync at start, then one retry 10 minutes later
     assert clouds == ["21:00", "21:15", "21:30"]
+
+
+
+def test_terminal_wizard_saves_checks_and_explains(env, monkeypatch):
+    from assetlog import setup_cli
+    answers = iter(["", "12345678", "01",  # KIS: set it up? (default yes), CANO, product code
+                    "y", "12345678", "",  # failed: try again, same CANO, keep product code
+                    "n",  # Toss: no
+                    ""])  # phone copy: no (default)
+    secrets = iter(["A" * 36, "B" * 180, "", ""])  # app key, secret; then kept on the retry
+    monkeypatch.setattr("builtins.input", lambda q="": next(answers))
+    monkeypatch.setattr(setup_cli.getpass, "getpass", lambda q="": next(secrets))
+    monkeypatch.setattr(setup, "public_ip", lambda: "5.6.7.8")
+    results = iter([{"ok": False, "why": "앱키가 올바르지 않아요", "fix": "다시 복사하세요", "error": "EGW00103"},
+                    {"ok": True, "summary": "연결됐어요. 계좌 총자산 1원"}])
+    monkeypatch.setattr(setup, "check", lambda svc: next(results))
+    out = []
+    monkeypatch.setattr("builtins.print", lambda *a, **k: out.append(" ".join(map(str, a))))
+    setup_cli.wizard()
+    text = "\n".join(out)
+    assert "5.6.7.8" in text and "실패: 앱키가 올바르지 않아요" in text and "성공: 연결됐어요" in text
+    assert "B" * 180 not in text  # a secret is never printed
+    assert f"KIS_APP_SECRET={'B' * 180}" in env.read_text() and "KIS_CANO=12345678" in env.read_text()
+
+
+
+def test_a_new_worker_address_needs_new_credentials(env):
+    creds = {"CF_ACCESS_CLIENT_ID": "abcdef0123456789.access", "CF_ACCESS_CLIENT_SECRET": "c" * 64, "CLOUD_PC_KEY": "k" * 43}
+    setup.save({"CLOUD_URL": "https://gaemi.me.workers.dev", **creds})
+    with pytest.raises(ValueError) as e:  # the stored secrets must not follow a swapped address
+        setup.save({"CLOUD_URL": "https://evil.example"})
+    assert "PC 키" in str(e.value) and "evil.example" not in env.read_text()
+    setup.save({"CLOUD_URL": "https://gaemi.me.workers.dev/"})  # the same address: fine
+    setup.save({"CLOUD_URL": "https://new.me.workers.dev", **creds})  # a new address with its credentials: fine
+    for bad in ("https://169.254.169.254", "https://10.0.0.5:8443", "https://localhost", "https://[::1]"):
+        with pytest.raises(ValueError):
+            setup.save({"CLOUD_URL": bad, **creds})
+
+
+def test_cloud_check_asks_past_every_op_id_within_the_workers_limit(env, monkeypatch):
+    from assetlog import cloud
+    setup.save({"CLOUD_URL": "https://gaemi.me.workers.dev", "CF_ACCESS_CLIENT_ID": "abcdef0123456789.access",
+                "CF_ACCESS_CLIENT_SECRET": "c" * 64, "CLOUD_PC_KEY": "k" * 43})
+    calls = []
+    monkeypatch.setattr(cloud, "_call", lambda s, m, url, **kw: calls.append((url, kw)) or {"mode": "cloud", "pushed_at": None})
+    assert setup.check("cloud")["ok"] is True
+    after = str(calls[1][1]["params"]["after"])
+    assert after.isdigit() and len(after) <= 15  # cloud/src/index.js pull(): /^\d{1,15}$/

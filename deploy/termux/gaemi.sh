@@ -2,11 +2,13 @@
 # Runs `python3 -m assetlog sync|cloud` inside the Debian proot (proot-distro) for Termux's cron, doing what the
 # systemd units do on a PC: wait for DNS, retry a sync that failed for a transient reason (exit 75) every 10 minutes
 # up to 5 more times, keep a log in the Termux home (~/gaemi-<cmd>.log, rotated at 1 MB), one run at a time.
-cmd=${1:?usage: gaemi.sh sync|cloud}
+cmd=${1:?usage: gaemi.sh sync|cloud|setup}
 case $cmd in
+  setup)  # the setup questions in this terminal (keys, then a live check)
+    exec proot-distro login debian -- sh -c "cd /root/assetlog && exec /root/venv/bin/python -m assetlog setup" ;;
   sync) host=openapi.koreainvestment.com tries=6 ;;
   cloud) host=cloudflare.com tries=1 ;;
-  *) echo "usage: gaemi.sh sync|cloud" >&2; exit 2 ;;
+  *) echo "usage: gaemi.sh sync|cloud|setup" >&2; exit 2 ;;
 esac
 log=$HOME/gaemi-$cmd.log
 [ -f "$log" ] && [ "$(wc -c < "$log")" -gt 1000000 ] && mv "$log" "$log.1"

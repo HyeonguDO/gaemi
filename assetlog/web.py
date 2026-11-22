@@ -4,7 +4,8 @@ There is no login: the phone uses the Worker in cloud/ behind Cloudflare Access,
 writes through this app in-process. local_only guards every request, and every response carries SECURITY_HEADERS:
 - the Host must be localhost, 127.0.0.1 or ::1 (DNS rebinding);
 - a client with an internet address is refused (the peer address; serve turns uvicorn's proxy headers off), so a
-  port opened by mistake fails closed;
+  port opened by mistake fails closed. Not inside Docker: published ports arrive from the bridge gateway, so there the
+  127.0.0.1 publish in docker-compose.yml is the boundary;
 - a request with X-Forwarded-For or Forwarded is refused: a tunnel opened by mistake that rewrites Host to localhost
   arrives from 127.0.0.1, and nothing legitimate here sends them;
 - writes need this app's Origin, and /api/* refuses Sec-Fetch-Site: cross-site (an <img> on another site can't

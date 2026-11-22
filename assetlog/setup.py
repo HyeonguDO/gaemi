@@ -4,11 +4,13 @@
 Secrets never leave this module: status() reports set/unset only, and check() reports broker messages, which carry
 codes and descriptions but never the key (the brokers' error bodies don't echo it).
 """
+import ipaddress
 import os
 import re
 import secrets
 import tempfile
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import requests
 
@@ -58,11 +60,20 @@ def save(values):
         pattern, limit = FIELDS[k]
         if k == "CLOUD_URL" and not v.startswith("https://"):
             raise ValueError("Worker 주소: https://로 시작해야 해요 (wrangler deploy가 출력한 주소)")
+        if k == "CLOUD_URL" and _internal(urlsplit(v).hostname or ""):
+            raise ValueError("Worker 주소: 인터넷 주소여야 해요 (wrangler deploy가 출력한 workers.dev 주소)")
         if len(v) > limit or not re.fullmatch(pattern, v):
             raise ValueError(f"{LABEL[k]}: 형식이 맞지 않아요. 앞뒤 공백이나 다른 글자가 섞이지 않았는지 확인하세요")
         clean[k] = v
     if not clean:
         return []
+    # A new Worker address gets the service token and the PC key in its headers (the check, every push), so it must
+    # come with them: otherwise anything that can reach this page could redirect the stored secrets to its own server.
+    old = config.load().get("CLOUD_URL", "").rstrip("/")
+    if "CLOUD_URL" in clean and old and clean["CLOUD_URL"].rstrip("/") != old:
+        need = [LABEL[k] for k in SERVICES["cloud"][1:] if k not in clean]
+        if need:
+            raise ValueError("Worker 주소를 바꿀 때는 " + ", ".join(need) + "도 함께 다시 넣어야 해요")
     path = config.ENV_FILE
     lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
     seen = set()
@@ -78,6 +89,16 @@ def save(values):
         f.write("\n".join(lines) + "\n")
     os.replace(tmp, path)
     return sorted(clean)
+
+
+def _internal(host):
+    """localhost or an IP literal that isn't a public address: never a Worker."""
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    try:
+        return not ipaddress.ip_address(host).is_global
+    except ValueError:
+        return False
 
 
 def public_ip():
@@ -175,7 +196,8 @@ def _check_cloud(cfg):
     meta = cloud._call(s, "GET", f"{url}/api/meta")  # Access lets the service token through
     if meta.get("mode") != "cloud":
         raise RuntimeError("HTTP 404: not a gaemi Worker")
-    cloud._call(s, "GET", f"{url}/pc/ops", params={"after": 1 << 53})  # the PC key matches, and nothing is taken
+    # the PC key matches, and nothing is taken: past any op id (the Worker takes at most 15 digits)
+    cloud._call(s, "GET", f"{url}/pc/ops", params={"after": 10**15 - 1})
     pushed = meta.get("pushed_at")
     return {"ok": True, "summary": "연결됐어요. " + (f"마지막으로 올린 시각 {pushed[:16].replace('T', ' ')}" if pushed
                                                    else "아직 올린 데이터가 없어요. 15분 안에 올라가요")}
