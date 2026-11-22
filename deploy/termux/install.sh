@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/sh
-# Termux side of running 개미장부 on an always-on Android phone instead of a PC (README: 안드로이드 폰에서 돌리기).
+# Termux side of running 개미장부 on an always-on Android phone instead of a PC (README: 안 쓰는 안드로이드 폰을 서버로 쓰기).
 # Expects the app in the Debian proot at /root/assetlog with a venv at /root/venv. Installs the cron entries
 # (sync 23:50 by the phone's clock, the phone copy every 15 minutes) and a boot script that keeps the phone awake for
 # Termux and starts sshd and crond after a reboot: in ~/.config/termux/boot for the Google Play Termux (boot support

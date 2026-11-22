@@ -1694,7 +1694,7 @@ const SETUP = {
     help: '토스증권 PC 웹(WTS)의 설정 > Open API에서 발급해요. 위의 공인 IP를 같은 화면의 <b>허용 IP 관리</b>에 먼저 등록하세요.',
     fields: [['TOSS_CLIENT_ID', 'Client ID'], ['TOSS_CLIENT_SECRET', 'Client Secret']] },
   cloud: { title: '폰에서 보기 (선택)', wait: '확인 중…',
-    help: 'README의 <b>폰에서 쓰기</b>대로 Cloudflare Worker를 만든 뒤 넣어요. 안 써도 이 기기에서는 다 돼요.',
+    help: '터미널에서 <b>./gaemi phone</b>을 실행하면 Worker를 만들고 이 값들을 알아서 넣어요. 안 써도 이 기기에서는 다 돼요.',
     fields: [['CLOUD_URL', 'Worker 주소', 'https://assetlog.내이름.workers.dev', 'url'], ['CF_ACCESS_CLIENT_ID', '서비스 토큰 Client ID'],
       ['CF_ACCESS_CLIENT_SECRET', '서비스 토큰 Client Secret'], ['CLOUD_PC_KEY', 'PC 키']] },
 };

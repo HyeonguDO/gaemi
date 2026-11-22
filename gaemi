@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# 개미장부 with Docker as the only requirement.
+#   ./gaemi          start (or restart) the app and open http://localhost:8000; the first run opens the setup page
+#   ./gaemi phone    set up the phone copy on Cloudflare (cloud/setup.mjs, run with Node from a container)
+#   ./gaemi setup    enter broker keys as terminal questions instead of the page
+#   ./gaemi logs | update | down
+set -euo pipefail
+cd "$(dirname "$0")"
+export GAEMI_UID GAEMI_GID
+GAEMI_UID=$(id -u) GAEMI_GID=$(id -g)  # files in data/ stay yours
+URL=http://localhost:8000
+
+need_docker() {
+  command -v docker >/dev/null || { echo "Docker가 필요해요: https://docs.docker.com/get-docker/" >&2; exit 1; }
+  docker compose version >/dev/null 2>&1 || { echo "docker compose가 필요해요 (Docker Desktop, 또는 리눅스는 docker-compose-plugin)" >&2; exit 1; }
+}
+open_url() { (xdg-open "$1" || open "$1" || cmd.exe /c start "" "$1") >/dev/null 2>&1 || true; }
+
+case "${1:-up}" in
+  up)
+    need_docker
+    mkdir -p data
+    docker compose up -d --build
+    printf '시작하는 중'
+    for _ in $(seq 60); do
+      docker compose exec -T gaemi python -c "import urllib.request; urllib.request.urlopen('$URL/manifest.webmanifest')" \
+        >/dev/null 2>&1 && break
+      printf .; sleep 1
+    done
+    echo
+    echo "열렸어요: $URL  (처음이면 연결 설정 화면이 나와요)"
+    open_url "$URL" ;;
+  phone)
+    need_docker
+    mkdir -p data
+    docker run --rm -it --user "$GAEMI_UID:$GAEMI_GID" -e HOME=/tmp -v "$PWD:/w" -w /w/cloud node:20-slim \
+      node setup.mjs --env ../data/.env "${@:2}" ;;
+  setup) need_docker; docker compose exec gaemi python -m assetlog setup ;;
+  logs) docker compose logs -f --tail 100 ;;
+  update) git pull --ff-only && exec "$0" up ;;
+  down) docker compose down ;;
+  *) echo "사용법: ./gaemi [up|phone|setup|logs|update|down]" >&2; exit 2 ;;
+esac

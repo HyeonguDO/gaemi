@@ -92,8 +92,8 @@ If Docker is available (any OS), this is the shortest path, and the user types e
 
 ## Step 7: phone copy on Cloudflare (optional)
 
-Prefer `cd cloud && node setup.mjs`: the user types a Cloudflare API token (permissions listed by the script and the
-README) and their login email; the script checks names are free, shows what it will create, asks, then creates D1,
+Prefer `./gaemi phone` (Docker) or `cd cloud && node setup.mjs`: it opens the token page with the four permissions
+prefilled, the user types the token and their login email; the script checks names are free, shows what it will create, asks, then creates D1,
 the service token, Access policies and app, deploys, sets PC_KEY, writes the four CLOUD_* values to the app's .env and
 verifies. It needs a workers.dev subdomain and a Zero Trust organization chosen once in the dashboard (it says so if
 missing). `node setup.mjs --remove` deletes what it made. The manual steps below remain for reference.

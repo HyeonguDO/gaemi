@@ -1,5 +1,5 @@
 #!/bin/sh
-# From the PC, for an Android phone that runs the sync (README: 안드로이드 폰에서 돌리기). Needs an SSH host alias
+# From the PC, for an Android phone that runs the sync (README: 안 쓰는 안드로이드 폰을 서버로 쓰기). Needs an SSH host alias
 # `gaemi-phone` in ~/.ssh/config (or GAEMI_PHONE=<alias>).
 #   deploy/phone.sh apply    the phone takes the pushed code: git pull, pip install, cron and boot script
 #   deploy/phone.sh backup   keep a copy of the phone's data/ in ~/gaemi-backups/<time>/ (no keys, nothing deleted)

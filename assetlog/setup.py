@@ -143,7 +143,7 @@ WHY = {
          "같은 값을 npx wrangler secret put PC_KEY로 Worker에도 넣으세요"),
         (r"PC_KEY is not set", "Worker에 PC 키가 없어요", "cloud/에서 npx wrangler secret put PC_KEY로 넣으세요"),
         (r"Access is not configured|HTTP 503", "Worker의 Access 설정(ACCESS_TEAM, ACCESS_AUD)이 비어 있어요",
-         "README의 '폰에서 쓰기' 6~7단계를 마치고 다시 배포하세요"),
+         "./gaemi phone으로 다시 설정하거나, cloud/wrangler.toml의 ACCESS_TEAM·ACCESS_AUD를 채워 다시 배포하세요"),
         (r"HTTP 403", "Cloudflare가 요청을 거절했어요", "서비스 토큰과 Worker의 Access 정책을 확인하세요"),
         (r"HTTP 404", "그 주소에 개미장부 Worker가 없어요", "Worker 주소를 확인하세요"),
     ),

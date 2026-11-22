@@ -1,6 +1,6 @@
 # 개미장부's phone copy on Cloudflare Workers, behind Cloudflare Access; all of it on the free plan.
 # Copy this file to wrangler.toml (kept out of git: it holds your own database_id and Access ids) and fill it in.
-# src/index.js explains how it works. One-time setup (README "Cloudflare 설정"), in this directory:
+# src/index.js explains how it works. ../gaemi phone (or node setup.mjs) does all of the below; by hand, in this directory:
 #   npm install && npx wrangler login
 #   npx wrangler d1 create assetlog                          # put the database_id it prints below
 #   npx wrangler d1 execute assetlog --remote --file schema.sql
