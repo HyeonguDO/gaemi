@@ -18,3 +18,18 @@ def test_breakdown_by_symbol_cash_and_account_mode():
     got = {c["class"]: c["value_krw"] for c in classes.breakdown(accounts, cfg, dc_cash=100)}
     assert got == pytest.approx({"주식": 500 + 400 + 50, "채권": 400, "금": 250, "코인": 300, "현금·예금": 200 + 100 + 400})
     assert sum(got.values()) == pytest.approx(sum(a["total_krw"] for a in accounts))
+
+
+def test_stocks_merge_a_symbol_across_accounts():
+    cfg = {"DC_ACCOUNT": "dc"}
+    accounts = [
+        {"id": "kis", "source": "live", "total_krw": 1000,
+         "positions": [{"symbol": "VOO", "name": "VANGUARD S&P500", "value_krw": 500},
+                       {"symbol": "005930", "name": "삼성전자", "value_krw": 200}]},
+        {"id": "toss", "source": "live", "total_krw": 700, "positions": [{"symbol": "VOO", "name": "Vanguard", "value_krw": 600}]},
+        {"id": "dc", "name": "퇴직연금", "source": "snapshot", "total_krw": 900, "positions": []},  # 100 of it is cash
+        {"id": "kb", "source": "snapshot", "total_krw": 50, "positions": []},  # no positions known: left out
+    ]
+    got = classes.stocks(accounts, cfg, dc_cash=100)
+    assert [(r["symbol"], r["value_krw"]) for r in got] == [("VOO", 1100), ("438100", 800), ("005930", 200)]
+    assert got[0]["name"] == "VANGUARD S&P500" and got[1]["name"] == "퇴직연금"

@@ -128,6 +128,15 @@ table.ytable { width: 100%; border-collapse: collapse; }
 
 /* holdings pie */
 .pie-wrap { position: relative; height: 200px; margin-top: 6px; }
+.readout { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; min-height: 18px; margin-top: 12px; font-size: 12.5px; color: var(--sub); }
+.readout + .chart-box { margin-top: 6px; }
+.readout .t { font-weight: 700; color: var(--text); }
+.readout i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+.readout b { margin-left: 3px; font-weight: 700; color: var(--text); }
+.readout .f { color: var(--muted); }
+.readout.center { position: absolute; inset: 0; margin: 0; flex-direction: column; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 2px; pointer-events: none; }
+.readout.center .nm { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.readout.center b { margin: 0; font-size: 20px; font-weight: 800; }
 .pie-legend { list-style: none; margin-top: 16px; }
 .pie-legend li { display: grid; grid-template-columns: 10px 1fr auto 72px; align-items: center; gap: 10px; padding: 7px 0; font-size: 13.5px; }
 .pie-legend i { width: 10px; height: 10px; border-radius: 3px; }
@@ -790,6 +799,54 @@ function accountRow(a, asOf) {
     ${r?.return_usd != null ? `<div class="acct-sub num">달러 기준 <b class="${tone(r.return_usd)}">${apct(r.return_usd)}</b></div>` : ''}</div>`;
 }
 
+// Chart values go in a line above the chart (where the legend was) instead of a box over it: the box hid the graph, and on
+// a phone it stayed until another tap on the chart, which only moved it. At rest the line shows the latest point (a donut's
+// centre shows nothing); a touch anywhere off the chart brings it back to rest.
+const atRest = ch => {
+  if (ch.config.type === 'doughnut') return [];
+  const n = Math.max(...ch.data.datasets.map(d => d.data.length)) - 1, i = Math.min(ch.config.options.restAt ?? n, n);
+  return ch.data.datasets.map((d, datasetIndex) => ({ datasetIndex, index: i }))
+    .filter(e => ch.isDatasetVisible(e.datasetIndex) && ch.data.datasets[e.datasetIndex].data[i] != null);
+};
+const rest = ch => ch.canvas && ch.tooltip.setActiveElements(atRest(ch), { x: 0, y: 0 });  // canvas is null once destroyed
+function readout({ chart: ch, tooltip: t }) {
+  const box = ch.canvas?.parentNode, pie = ch.config.type === 'doughnut';
+  if (!box) return;
+  let el = pie ? box.querySelector('.readout') : box.previousElementSibling;
+  if (!el?.classList.contains('readout')) {
+    el = Object.assign(document.createElement('div'), { className: pie ? 'readout center' : 'readout' });
+    pie ? box.append(el) : box.before(el);
+  }
+  if (!t.opacity) {  // let go: back to rest once Chart.js is done with this update
+    el.innerHTML = '';
+    if (!pie) queueMicrotask(() => rest(ch));
+    return;
+  }
+  const foot = t.footer.join(' ').trim();
+  if (pie) {
+    el.innerHTML = `<span class="nm">${esc(t.dataPoints[0].label)}</span><b class="num">${esc(t.body[0].lines.join(''))}</b><span class="num">${esc(foot)}</span>`;
+    return;
+  }
+  el.innerHTML = `<span class="t num">${esc(t.title.join(' '))}</span>` + t.dataPoints.map((d, i) => {
+    const col = (d.dataset.type || ch.config.type) === 'line' ? d.dataset.borderColor : t.labelColors[i].backgroundColor;  // a point's border can be the card colour
+    return `<span><i style="background:${col}"></i>${esc(d.dataset.label)}<b class="num">${esc(t.body[i].lines.join(''))}</b></span>`;
+  }).join('') + (foot ? `<span class="f num">${esc(foot)}</span>` : '');
+}
+if (window.Chart) {
+  Chart.defaults.plugins.legend.display = false;  // the readout line names each series
+  Chart.defaults.plugins.tooltip.enabled = false;
+  Chart.defaults.plugins.tooltip.external = readout;
+  Chart.register({ id: 'readout', afterUpdate: ch => { if (!ch.tooltip.getActiveElements().length) queueMicrotask(() => rest(ch)); } });
+  document.addEventListener('pointerdown', e => {
+    if (e.target instanceof HTMLCanvasElement) return;
+    for (const ch of Object.values(state.charts)) if (ch?.canvas && ch.getActiveElements().length) {
+      ch.setActiveElements([]);
+      ch.tooltip.setActiveElements([], { x: 0, y: 0 });
+      ch.render();
+    }
+  });
+}
+
 function drawCharts(s) {
   if (!window.Chart) {
     document.querySelectorAll('.chart-box').forEach(el => el.innerHTML = '<p class="hint">차트를 불러오지 못했어요. 인터넷 연결을 확인하세요.</p>');
@@ -802,10 +859,7 @@ function drawCharts(s) {
   Chart.defaults.borderColor = c('line');
   const opts = (fmt, extra = {}) => ({
     responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { position: 'top', align: 'start', labels: { usePointStyle: true, pointStyle: 'rectRounded', boxWidth: 8, boxHeight: 8, color: c('sub') } },
-      tooltip: { callbacks: { label: x => ` ${x.dataset.label} ${fmt(x.parsed.y)}`, ...extra.tooltip } },
-    },
+    plugins: { tooltip: { callbacks: { label: x => fmt(x.parsed.y), ...extra.tooltip } } },
     scales: {
       x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, stacked: !!extra.stacked },
       y: { grid: { color: c('line') }, border: { display: false }, ticks: { callback: fmt === won ? short : v => Math.round(v * 100) + '%', maxTicksLimit: 5 }, stacked: !!extra.stacked },
@@ -831,7 +885,7 @@ function drawCharts(s) {
   for (let i = 23; i >= 0; i--) { const d = new Date(y0, m0 - 1 - i, 1); months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); }
   draw('c-divs', { type: 'bar', data: { labels: months.map(m => m.slice(2).replace('-', '.')), datasets: [
     { label: '배당금', data: months.map(m => s.dividends_by_month[m] || 0), backgroundColor: c('mint'), borderRadius: 4, maxBarThickness: 18 },
-  ] }, options: { ...opts(won), plugins: { ...opts(won).plugins, legend: { display: false } } } });
+  ] }, options: opts(won) });
 }
 
 // holdings: live positions per account (GET /api/holdings, cached 60 s server-side)
@@ -861,27 +915,37 @@ function renderHoldings() {
   }
   // color follows the account (ledger order), not its rank or whether it has a value today
   // ponytail: 6 palette slots; a 7th account would repeat slot 1. Fold extras into "기타" if that day comes.
-  const accts = h.accounts.map((a, i) => ({ ...a, color: `var(--p${i % 6 + 1})`, slot: i % 6 + 1 }))
+  const accts = h.accounts.map((a, i) => ({ ...a, key: `p${i % 6 + 1}` }))
     .sort((a, b) => (b.total_krw || 0) - (a.total_krw || 0));  // biggest first; colors were fixed above
-  // the donut by account or by asset class (classes.py); the choice is kept per device
-  const by = state.pieBy ??= (() => { try { return localStorage.getItem('pieBy'); } catch { return null; } })() || 'acct';
-  const cls = (h.classes || []).filter(c => c.value_krw > 0)
-    .map(c => ({ name: c.class, total_krw: c.value_krw, slot: CLASS_SLOT[c.class] || 6, color: `var(--p${CLASS_SLOT[c.class] || 6})` }));
-  const pie = by === 'class' && cls.length ? cls : accts.filter(a => a.total_krw > 0), total = sum(pie, 'total_krw');
+  // the donut by account, by asset class (classes.py) or by holding across accounts (classes.stocks); the choice is
+  // kept per device. More than six holdings: the donut shows the top five and folds the rest, the list shows them all.
+  const views = {
+    acct: accts.filter(a => a.total_krw > 0),
+    class: (h.classes || []).filter(c => c.value_krw > 0).map(c => ({ name: c.class, total_krw: c.value_krw, key: `p${CLASS_SLOT[c.class] || 6}` })),
+    stock: (h.stocks || []).map((s, i, all) => ({ name: s.name, total_krw: s.value_krw, key: all.length > 6 && i >= 5 ? 'neutral' : `p${i + 1}` })),
+  };
+  const want = state.pieBy ??= (() => { try { return localStorage.getItem('pieBy'); } catch { return null; } })() || 'acct';
+  const by = views[want]?.length ? want : 'acct', rows = views[by], total = sum(rows, 'total_krw'), all = sum(views.acct, 'total_krw');
+  const pie = rows.length > 6 && by === 'stock'
+    ? [...rows.slice(0, 5), { name: `그 밖 ${rows.length - 5}종목`, total_krw: sum(rows.slice(5), 'total_krw'), key: 'neutral' }] : rows;
+  const tabs = Object.entries(PIE_BY).filter(([k]) => views[k].length), missing = accts.filter(a => a.error).map(a => a.name);
   const t = new Date(h.fetched_at);
   box.innerHTML = `<article class="card">
-      <div class="tag-muted">전체 계좌</div><div class="hero-value num" style="font-size:30px;margin-top:6px">${won(total)}</div>
+      <div class="tag-muted">전체 계좌</div><div class="hero-value num" style="font-size:30px;margin-top:6px">${won(all)}</div>
       <div class="hero-meta">${t.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 조회 · 계좌 ${accts.length}개</div>
-      ${cls.length ? `<div class="chips" id="pie-by">${[['acct', '계좌별'], ['class', '자산 종류별']].map(([k, l]) =>
+      ${tabs.length > 1 ? `<div class="chips" id="pie-by">${tabs.map(([k, l]) =>
         `<button type="button" class="chip${k === by ? ' on' : ''}" aria-pressed="${k === by}" data-pie="${k}">${l}</button>`).join('')}</div>` : ''}
-      ${pie.length ? `<div class="pie-wrap"><canvas id="c-pie" role="img" aria-label="${by === 'class' ? '자산 종류별' : '계좌별'} 평가액 비중"></canvas></div>
-      <ul class="pie-legend">${pie.map(a => `<li><i style="background:${a.color}"></i><span class="nm">${esc(a.name)}</span>
+      ${pie.length ? `<div class="pie-wrap"><canvas id="c-pie" role="img" aria-label="${PIE_BY[by]} 평가액 비중"></canvas></div>
+      ${by === 'stock' ? `<p class="hint">종목 합계 <b class="num">${won(total)}</b> · 전체 계좌의 ${pct(total / all, false)}${missing.length
+        ? `<br>잔고를 못 읽은 계좌는 빠져 있어요: ${missing.map(esc).join(', ')}` : ''}</p>` : ''}
+      <ul class="pie-legend">${rows.map(a => `<li><i style="background:var(--${a.key})"></i><span class="nm">${esc(a.name)}</span>
         <b class="num">${pct(a.total_krw / total, false)}</b><span class="sub num">${won(a.total_krw)}</span></li>`).join('')}</ul>` : '<p class="hint">평가액이 있는 계좌가 아직 없어요.</p>'}
     </article>` + accts.map(holdingCard).join('');
   if (pie.length) drawPie(pie, total);
 }
 
 const CLASS_SLOT = { '주식': 1, '현금·예금': 2, '금': 3, '코인': 5, '채권': 6 };  // 금 gets the amber slot
+const PIE_BY = { acct: '계좌별', class: '자산 종류별', stock: '주식 종류별' };
 $('#hd-body').addEventListener('click', e => {
   const b = e.target.closest('.chip[data-pie]');
   if (!b || !state.holdings) return;
@@ -921,9 +985,9 @@ function drawPie(pie, total) {
   const cs = getComputedStyle(document.documentElement), c = n => cs.getPropertyValue('--' + n).trim();
   state.charts['c-pie'] = new Chart($('#c-pie'), { type: 'doughnut',
     data: { labels: pie.map(a => a.name), datasets: [{ data: pie.map(a => a.total_krw),
-      backgroundColor: pie.map(a => c('p' + a.slot)), borderColor: c('card'), borderWidth: 2, hoverOffset: 4 }] },
+      backgroundColor: pie.map(a => c(a.key)), borderColor: c('card'), borderWidth: 2, hoverOffset: 4 }] },
     options: { responsive: true, maintainAspectRatio: false, cutout: '62%',
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: x => ` ${won(x.parsed)} · ${pct(x.parsed / total, false)}` } } } } });
+      plugins: { tooltip: { callbacks: { label: x => pct(x.parsed / total, false), footer: xs => won(xs[0].parsed) } } } } });
 }
 
 // review
@@ -1608,8 +1672,7 @@ function drawFireCharts(p, r, names) {
   const cs = getComputedStyle(document.documentElement), c = n => cs.getPropertyValue('--' + n).trim(), divGoal = p.goal === 'dividend';
   const alpha = (hex, a) => `rgba(${[1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(',')},${a})`;
   const opts = stacked => ({ responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-    plugins: { legend: { position: 'top', align: 'start', labels: { usePointStyle: true, pointStyle: 'rectRounded', boxWidth: 8, boxHeight: 8, color: c('sub') } },
-      tooltip: { callbacks: { title: xs => xs[0].label + '세', label: x => ` ${x.dataset.label} ${won(x.parsed.y)}` } } },
+    plugins: { tooltip: { callbacks: { title: xs => xs[0].label + '세', label: x => won(x.parsed.y) } } },
     scales: { x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
       y: { stacked, grid: { color: c('line') }, border: { display: false }, ticks: { callback: short, maxTicksLimit: 5 } } } });
   const line = (label, data, color, dash) => ({ label, data, borderColor: c(color), backgroundColor: c(color), borderWidth: 2, pointRadius: 0, tension: 0.2, borderDash: dash });
@@ -1618,19 +1681,21 @@ function drawFireCharts(p, r, names) {
     const row = run.rows.find(w => w.age === Math.round(x.age)), f = (1 + p.inflation) ** x.T;
     return row ? (row.net + row.pension * (1 - p.pension_tax)) / 12 * row.real : fireNet(p, x.div, f) / 12 / f;
   };
+  const at = ages => ages.includes(p.fire_age) ? ages.indexOf(p.fire_age) : undefined;  // the readout rests on the FIRE age
   const base = r.need && r.need.path.length > r.now.path.length ? r.need : r.now, ages = base.path.map(x => Math.round(x.age));
   for (const id of ['c-fire', 'c-fire-assets']) state.charts[id]?.destroy();
   state.charts['c-fire'] = new Chart($('#c-fire'), { type: 'line', data: { labels: ages, datasets: [
     line('지금 계획', r.now.path.map(y(r.now)), 'accent'),
     r.need && r.need !== r.now && line('목표에 닿는 계획', r.need.path.map(y(r.need)), 'neutral', [4, 4]),
-    divGoal && line('목표', base.path.map(() => p.monthly), 'up', [2, 3])].filter(Boolean) }, options: opts(false) });
+    divGoal && line('목표', base.path.map(() => p.monthly), 'up', [2, 3])].filter(Boolean) }, options: { ...opts(false), restAt: at(ages) } });
   // the five biggest items at the end, then the rest as one band
   const run = r.now, last = run.path.at(-1), order = names.map((_, i) => i).sort((a, b) => last.vals[b] - last.vals[a]);
   const real = (x, i) => x.vals[i] / (1 + p.inflation) ** x.T;
   const band = (label, f, color) => ({ label, data: run.path.map(f), fill: 'stack', borderColor: c(color), backgroundColor: alpha(c(color), 0.3), borderWidth: 1.5, pointRadius: 0, tension: 0.2 });
   const sets = order.slice(0, 5).map(i => band(names[i], x => real(x, i), FIRE_COLORS[i % FIRE_COLORS.length]));  // the slider's colour
   if (order.length > 5) sets.push(band('그 밖', x => order.slice(5).reduce((t, i) => t + real(x, i), 0), 's1'));
-  state.charts['c-fire-assets'] = new Chart($('#c-fire-assets'), { type: 'line', data: { labels: run.path.map(x => Math.round(x.age)), datasets: sets }, options: opts(true) });
+  const runAges = run.path.map(x => Math.round(x.age));
+  state.charts['c-fire-assets'] = new Chart($('#c-fire-assets'), { type: 'line', data: { labels: runAges, datasets: sets }, options: { ...opts(true), restAt: at(runAges) } });
 }
 
 async function loadFire() {

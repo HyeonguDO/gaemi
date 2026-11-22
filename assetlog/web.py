@@ -639,4 +639,5 @@ def holdings(refresh: bool = False):
     cfg = config.load()
     dc = latest.get(cfg.get("DC_ACCOUNT"))
     return _json_safe({"fetched_at": held["fetched_at"], "accounts": out,
-                       "classes": classes.breakdown(out, cfg, dc and dc["cash"])})
+                       "classes": classes.breakdown(out, cfg, dc and dc["cash"]),
+                       "stocks": classes.stocks(out, cfg, dc and dc["cash"])})

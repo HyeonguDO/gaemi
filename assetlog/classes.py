@@ -14,6 +14,7 @@ CLASS = {
     "438100": {"주식": 0.5, "채권": 0.5},    # ACE 미국나스닥100미국채혼합50액티브: half Nasdaq-100, half US Treasuries
 }
 STOCK, CASH = {"주식": 1}, {"현금·예금": 1}
+DC_DEFAULT = "438100"  # dcmodel's DC_SYMBOL when unset
 
 
 def breakdown(accounts, cfg, dc_cash=0.0):
@@ -31,7 +32,7 @@ def breakdown(accounts, cfg, dc_cash=0.0):
                 add(CLASS.get(p["symbol"], STOCK), p["value_krw"])
             add(CASH, total - sum(p["value_krw"] for p in a["positions"]))
         elif a["id"] == cfg.get("DC_ACCOUNT"):
-            add(CLASS.get(cfg.get("DC_SYMBOL", ""), STOCK), total - (dc_cash or 0.0))
+            add(CLASS.get(cfg.get("DC_SYMBOL") or DC_DEFAULT, STOCK), total - (dc_cash or 0.0))
             add(CASH, dc_cash or 0.0)
         elif a["id"] in principal.accounts(cfg):
             add(CASH, total)
@@ -40,3 +41,20 @@ def breakdown(accounts, cfg, dc_cash=0.0):
         else:
             add(STOCK, total)
     return [{"class": k, "value_krw": v} for k, v in out.items() if abs(v) >= 1]
+
+
+def stocks(accounts, cfg, dc_cash=0.0):
+    """[{"symbol", "name", "value_krw"}], biggest first: every holding across accounts, one row per symbol
+    (보유 탭 '주식 종류별'). The DC pension is its ETF; other accounts without live positions are left out."""
+    out = {}
+
+    def add(symbol, name, value):
+        out.setdefault(symbol, {"symbol": symbol, "name": name, "value_krw": 0.0})["value_krw"] += value
+
+    for a in accounts:
+        if a["source"] == "live":
+            for p in a["positions"]:
+                add(p["symbol"], p["name"], p["value_krw"])
+        elif a["id"] == cfg.get("DC_ACCOUNT") and a.get("total_krw"):
+            add(cfg.get("DC_SYMBOL") or DC_DEFAULT, a["name"], a["total_krw"] - (dc_cash or 0.0))
+    return sorted((r for r in out.values() if r["value_krw"] >= 1), key=lambda r: -r["value_krw"])
