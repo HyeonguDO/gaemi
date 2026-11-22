@@ -33,10 +33,14 @@ HINTS = (  # (source, message pattern, what to do): known causes only
     # still rejected (kis.STALE)
     ("kis", re.compile(r"tokenP: HTTP 4\d\d (?!EGW00133)|EGW0010[35]|EGW0012[13]"),
      "한투 Open API 신청이 만료됐는지 확인하세요 (홈페이지 서비스신청 > Open API > KIS Developers)"),
+    # KIS answering 200 with an internal relay error (seen 2026-11-18, cleared within the hour); Toss's dividends use
+    # KIS too. TRANSIENT below covers it, so the sync is retried
+    (None, re.compile(r"OPSQ0008"), "한국투자증권 서버의 일시 오류(OPSQ0008)예요. 10분 뒤 자동으로 다시 시도해요"),
     # None: any source. No network (e.g. the boot catch-up ran before Wi-Fi was up); the unit retries on its own
-    (None, TRANSIENT := re.compile(r"ConnectionError|NameResolution|ConnectTimeout|ReadTimeout|EGW00201|EGW00215"),
+    (None, re.compile(r"ConnectionError|NameResolution|ConnectTimeout|ReadTimeout|EGW00201|EGW00215"),
      "인터넷 연결이 안 된 상태라 실패했어요. 연결되면 자동으로 다시 시도해요"),
 )
+TRANSIENT = re.compile("|".join(p.pattern for _, p, _ in HINTS[2:]))  # worth a retry: __main__ exits 75
 
 log = logging.getLogger(__name__)
 

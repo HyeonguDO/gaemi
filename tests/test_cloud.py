@@ -179,6 +179,13 @@ def test_account_delete_from_the_phone(ledger, monkeypatch):
     assert not rows("SELECT 1 FROM transactions WHERE account_id = 'kb:demo-01'")
     assert "kb:demo-01" not in {a["id"] for a in w.state["items"]["accounts"]}
 
+
+def test_failed_live_reads_are_reported(ledger, monkeypatch):
+    monkeypatch.setattr(web, "_live_holdings", lambda: {
+        "at": time.monotonic(), "live": {}, "errors": {"toss": "TossError: HTTP 403 access_denied"}, "fetched_at": "x"})
+    report = run(monkeypatch, Worker([]))
+    assert report["holdings_errors"] == {"toss": "TossError: HTTP 403 access_denied"}
+
 def test_never_reapplied_and_lost_reports_retried(ledger, monkeypatch):
     ops = [op(7, "POST", "/api/transactions", {"account_id": "kb:demo-01", "date": "2026-09-24", "kind": "DEPOSIT",
                                               "amount": 5000})]

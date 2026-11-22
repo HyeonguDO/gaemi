@@ -38,7 +38,8 @@ case ${1:-} in
     systemctl --user list-timers gaemi-phone-backup.timer --no-pager
     ;;
   status)
-    ssh "$host" 'for f in sync cloud; do echo "-- $f"; grep -E "^== " "$HOME/gaemi-$f.log" 2>/dev/null | tail -4; done'
+    ssh "$host" 'for f in sync cloud; do echo "-- $f"; grep -E "^== " "$HOME/gaemi-$f.log" 2>/dev/null | tail -4; done
+      echo "-- watchdog (revivals and catch-up syncs)"; tail -5 "$HOME/gaemi-tick.log" 2>/dev/null'
     ;;
   *) echo "usage: deploy/phone.sh apply|backup|timer|status" >&2; exit 2 ;;
 esac

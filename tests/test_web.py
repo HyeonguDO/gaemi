@@ -532,3 +532,10 @@ def test_inbox_parts_are_put_back_together_in_any_order(client, tmp_path, monkey
     assert send(3, b"x").status_code == 422 and send(0, b"x", up="nothex").status_code == 422
     monkeypatch.setattr(web, "MAX_PART", 2)
     assert send(0, b"123").status_code == 413
+
+
+def test_kis_relay_error_is_transient_with_its_own_hint():
+    msg = "RuntimeError: KIS FHKST03010100: HTTP 200 [OPSQ0008] 호출 후처리(MCI전송) 오류 입니다."
+    assert sync.TRANSIENT.search(msg) and sync.TRANSIENT.search("ConnectionError: x")
+    assert next(h for s, p, h in sync.HINTS if p.search(msg)).startswith("한국투자증권 서버의 일시 오류")
+    assert not sync.TRANSIENT.search("toss: HTTP 403 access_denied")

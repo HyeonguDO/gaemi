@@ -138,8 +138,8 @@ AI 코딩 도구(Claude Code, Codex, Cursor 등)를 쓰신다면 이 저장소�
    proot-distro login debian -- bash -c "apt-get update && apt-get install -y python3 python3-venv git ca-certificates tzdata && git clone https://github.com/HyeonguDO/gaemi.git /root/assetlog && python3 -m venv /root/venv && /root/venv/bin/pip install -r /root/assetlog/requirements.txt"
    ```
 3. PC의 `.env`와 `data/`를 폰의 데비안 안 `/root/assetlog/`로 옮깁니다. 같은 와이파이에서 SSH(`sshd`, 포트 8022)로 보내면 인터넷을 거치지 않습니다. Termux 쪽 실제 위치는 proot-distro 버전에 따라 `$PREFIX/var/lib/proot-distro/containers/debian/rootfs/root/assetlog` 또는 `.../installed-rootfs/debian/root/assetlog`입니다.
-4. Termux에서 `sh $PREFIX/var/lib/proot-distro/containers/debian/rootfs/root/assetlog/deploy/termux/install.sh`를 실행합니다. 매일 23:50 동기화와 15분마다 폰 사본 올리기를 cron에 등록하고, 폰을 다시 켜도 이어서 돌도록 Termux:Boot 스크립트를 넣습니다. 실행 기록은 Termux 홈의 `gaemi-sync.log`, `gaemi-cloud.log`에 남습니다.
-5. 폰 설정: 배터리에서 Termux를 '제한 없음'으로 두고(밤에 꺼지지 않게), 충전기에 계속 꽂아 둘 테니 '배터리 보호'(최대 85%)를 켜고, 화면 잠금을 걸어 두세요. 키가 이 폰에 있습니다. 이 폰으로 다른 앱을 깔거나 웹을 보지 않는 게 안전합니다.
+4. Termux에서 `pkg install -y termux-api` 후 `sh $PREFIX/var/lib/proot-distro/containers/debian/rootfs/root/assetlog/deploy/termux/install.sh`를 실행합니다. 매일 23:50 동기화와 15분마다 폰 사본 올리기를 cron에 등록하고, 폰을 다시 켜도 이어서 돌도록 부팅 스크립트를 넣습니다. 또 안드로이드 작업 예약(JobScheduler)에 15분 간격의 감시 작업을 등록합니다. 안드로이드가 Termux의 프로그램을 정리해도 이 작업이 cron과 SSH를 되살리고, 놓친 23:50 동기화를 바로 돌립니다. 실행 기록은 Termux 홈의 `gaemi-sync.log`, `gaemi-cloud.log`, `gaemi-tick.log`(되살린 기록)에 남습니다.
+5. 폰 설정: 배터리에서 Termux를 '제한 없음'으로 두고 '절전 예외 앱'에 넣고, 삼성이면 디바이스 케어의 '자동 최적화'를 끄고(새벽에 백그라운드 앱을 닫습니다), 개발자 옵션의 '하위 프로세스 제한 사용 안 함'을 켜고, 충전기에 계속 꽂아 둘 테니 '배터리 보호'(최대 85%)를 켜고, 화면 잠금을 걸어 두세요. 키가 이 폰에 있습니다. 이 폰으로 다른 앱을 깔거나 웹을 보지 않는 게 안전합니다.
 
 **PC에서 관리하기** (`deploy/phone.sh`, `~/.ssh/config`에 폰을 가리키는 `gaemi-phone` 별칭이 있어야 함)
 - 개발은 PC에서 데모 장부로 하고, GitHub에 올린 뒤 `deploy/phone.sh apply`로 폰에 적용합니다(코드 받기, 패키지, cron). 화면만 바뀌었다면 PC에서 `npx wrangler deploy`도 합니다.

@@ -211,7 +211,7 @@ def _push(s, url, app, applied):
     state = _read("cloud.json", {"after": 0, "unreported": {}})
     sent = state.setdefault("sent", {})  # key: sha256 of the body the Worker last took
     push_holdings = applied > 0 or not state.get("holdings_at") or time.time() - state["holdings_at"] >= HOLDINGS_PERIOD
-    pushed, unchanged, left_out = [], [], {}
+    pushed, unchanged, left_out, failed = [], [], {}, {}
     for name, path in READS.items():
         if name == "holdings" and not push_holdings:
             continue
@@ -220,6 +220,8 @@ def _push(s, url, app, applied):
             left_out[name] = _detail(r)
             continue
         items = {name: r.json()}
+        if name == "holdings":  # a broker whose live read failed (the page shows its last snapshot): only the log keeps it
+            failed = {a["institution"]: str(a["error"])[:200] for a in items[name].get("accounts", []) if a.get("error")}
         if name == "transactions":  # split by month, keeping the order; a month sent before and now rowless goes as []
             rows, items = items[name], {k: [] for k in sent if k.startswith(MONTH)}
             if not rows:  # an empty ledger still gets a month key, this one: with none the Worker answers "not pushed"
@@ -253,7 +255,8 @@ def _push(s, url, app, applied):
             if key == "holdings":
                 state["holdings_at"] = time.time()
             _write("cloud.json", state)
-    return {"pushed_at": pushed_at, "pushed": _brief(pushed), "unchanged": _brief(unchanged), "left_out": left_out}
+    report = {"pushed_at": pushed_at, "pushed": _brief(pushed), "unchanged": _brief(unchanged), "left_out": left_out}
+    return {**report, "holdings_errors": failed} if failed else report
 
 
 def _brief(keys):
